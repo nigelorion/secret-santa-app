@@ -10,6 +10,12 @@ import {
     getDoc,
     deleteDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const firebaseConfig = {
     apiKey: 'AIzaSyD_w3zUhizJZsjdtrzTkq_lAePsvAFVM_o',
@@ -26,6 +32,7 @@ const db = initializeFirestore(app, {
     experimentalAutoDetectLongPolling: true,
     useFetchStreams: false
 });
+const auth = getAuth(app);
 
 export {
     db,
@@ -36,5 +43,9 @@ export {
     doc,
     setDoc,
     getDoc,
-    deleteDoc
+    deleteDoc,
+    auth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
 };

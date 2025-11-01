@@ -4,7 +4,7 @@ import {
     toggleQuickPicks,
     handleSignup,
     handleAdminLogin,
-    handleChangePassword,
+    handleAdminLogout,
     updateConfig,
     runSecretSanta,
     clearAllParticipants,
@@ -15,7 +15,7 @@ window.showView = showView;
 window.toggleQuickPicks = toggleQuickPicks;
 window.handleSignup = handleSignup;
 window.handleAdminLogin = handleAdminLogin;
-window.handleChangePassword = handleChangePassword;
+window.handleAdminLogout = handleAdminLogout;
 window.updateConfig = updateConfig;
 window.runSecretSanta = runSecretSanta;
 window.clearAllParticipants = clearAllParticipants;

@@ -3,12 +3,17 @@ import {
     TOTAL_PARTICIPANTS_TARGET,
     loadFromFirebase,
     saveParticipant,
-    saveConfig,
     updateConfig as updateConfigState,
     clearAllParticipants as clearAllParticipantsData,
     parseHistoricalPairings,
-    hashPassword
+    setAdminAuth
 } from './state.js';
+import {
+    auth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from './firebase.js';
 
 function handleFocusScroll(event) {
     const target = event.target;
@@ -218,90 +223,40 @@ async function handleSignup(event) {
 
 async function handleAdminLogin(event) {
     event.preventDefault();
-    const passwordInput = document.getElementById('passwordInput');
-    const password = passwordInput.value.trim();
+    const form = event.target;
+    const email = (form.adminEmail.value || '').trim();
+    const password = form.adminPassword.value || '';
     const messageContainer = document.getElementById('adminLoginMessage');
 
-    if (!password) {
+    if (!email || !password) {
         if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Please enter your password.', 'error');
-        }
-        return;
-    }
-
-    if (!state.config.admin.passwordHash) {
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Admin password is not configured. Please contact the organizer to set it up in Firebase.', 'error');
+            messageContainer.innerHTML = showMessage('Please enter your email and password.', 'error');
         }
         return;
     }
 
     try {
-        const hashed = await hashPassword(password);
-        if (hashed === state.config.admin.passwordHash) {
-            state.isAdminAuthenticated = true;
-            localStorage.setItem('adminSession', hashed);
-            passwordInput.value = '';
-            if (messageContainer) {
-                messageContainer.innerHTML = showMessage('Access granted.', 'success');
-            }
-            showView('admin');
-        } else if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Incorrect password. Please try again.', 'error');
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('Signing in…', 'info');
         }
+        await signInWithEmailAndPassword(auth, email, password);
+        form.reset();
     } catch (error) {
         console.error('Admin login error:', error);
         if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Unable to verify password in this browser.', 'error');
+            const message = error.code === 'auth/invalid-credential'
+                ? 'Invalid email or password.'
+                : 'Unable to sign in. Please try again.';
+            messageContainer.innerHTML = showMessage(message, 'error');
         }
     }
 }
 
-async function handleChangePassword(event) {
-    event.preventDefault();
-    const form = event.target;
-    const currentPassword = form.currentPassword.value.trim();
-    const newPassword = form.newPassword.value.trim();
-    const confirmPassword = form.confirmPassword.value.trim();
-    const messageContainer = document.getElementById('adminMessage');
-
-    if (!newPassword || newPassword.length < 6) {
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('New password must be at least 6 characters long.', 'error');
-        }
-        return;
-    }
-
-    if (newPassword !== confirmPassword) {
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('New password and confirmation do not match.', 'error');
-        }
-        return;
-    }
-
+async function handleAdminLogout() {
     try {
-        const currentHash = await hashPassword(currentPassword);
-        if (state.config.admin.passwordHash && currentHash !== state.config.admin.passwordHash) {
-            if (messageContainer) {
-                messageContainer.innerHTML = showMessage('Current password is incorrect.', 'error');
-            }
-            return;
-        }
-
-        const newHash = await hashPassword(newPassword);
-        state.config.admin.passwordHash = newHash;
-        await saveConfig();
-        localStorage.setItem('adminSession', newHash);
-        form.reset();
-
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Admin password updated successfully.', 'success');
-        }
+        await signOut(auth);
     } catch (error) {
-        console.error('Password update error:', error);
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Could not update password. Please try again.', 'error');
-        }
+        console.error('Logout error:', error);
     }
 }
 
@@ -368,6 +323,10 @@ async function sendEmails(assignments) {
 }
 
 async function runSecretSanta() {
+    if (!state.isAdminAuthenticated) {
+        document.getElementById('adminMessage').innerHTML = showMessage('Admin sign-in required to run assignments.', 'error');
+        return;
+    }
     if (state.participants.length < 3) {
         document.getElementById('adminMessage').innerHTML = showMessage('Need at least 3 participants!', 'error');
         return;
@@ -419,7 +378,13 @@ async function runSecretSanta() {
 }
 
 async function clearAllParticipants() {
-    if (!state.isAdminAuthenticated) return;
+    if (!state.isAdminAuthenticated) {
+        const messageContainer = document.getElementById('adminMessage');
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('Admin sign-in required to clear participants.', 'error');
+        }
+        return;
+    }
     const confirmed = window.confirm('This will remove everyone who has signed up. Continue?');
     if (!confirmed) return;
 
@@ -432,7 +397,7 @@ async function clearAllParticipants() {
             return;
         }
         await clearAllParticipantsData();
-        updateProgressBar();
+        await loadFromFirebase();
         render();
         const messageContainer = document.getElementById('adminMessage');
         if (messageContainer) {
@@ -448,6 +413,13 @@ async function clearAllParticipants() {
 }
 
 function updateConfig(field, value) {
+    if (!state.isAdminAuthenticated) {
+        const messageContainer = document.getElementById('adminMessage');
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('Sign in as admin to update settings.', 'error');
+        }
+        return Promise.resolve(false);
+    }
     return updateConfigState(field, value);
 }
 
@@ -511,21 +483,22 @@ function render() {
             </form>
         `;
         toggleQuickPicks(false);
-    } else if (state.view === 'admin-login' && !state.isAdminAuthenticated) {
-        const hasPassword = Boolean(state.config.admin.passwordHash);
+    } else if (!state.isAdminAuthenticated) {
+        state.view = 'admin-login';
         content.innerHTML = `
             <h2>ADMIN LOGIN</h2>
             <div id="adminLoginMessage"></div>
             <form onsubmit="handleAdminLogin(event); return false;">
-                <p class="helper-text" style="margin-bottom: 20px;">${hasPassword ? 'Enter the secret password to access the admin dashboard.' : 'No admin password is set. Configure one securely in Firebase before enabling access.'}</p>
-                <input type="password" id="passwordInput" ${hasPassword ? '' : 'disabled'} required placeholder="${hasPassword ? 'ENTER PASSWORD' : 'PASSWORD NOT CONFIGURED'}">
-                <button type="submit" ${hasPassword ? '' : 'disabled'}>
+                <p class="helper-text" style="margin-bottom: 20px;">Sign in with your admin email to continue.</p>
+                <input type="email" name="adminEmail" required placeholder="ADMIN EMAIL">
+                <input type="password" name="adminPassword" required placeholder="PASSWORD">
+                <button type="submit">
                     LOGIN
                 </button>
             </form>
             <button type="button" class="button-secondary" onclick="showView('signup')" style="margin-top:16px;width:auto;padding:10px 18px;">⬅ BACK TO SIGN UP</button>
         `;
-    } else if (state.isAdminAuthenticated && (state.view === 'admin' || state.view === 'admin-login')) {
+    } else {
         state.view = 'admin';
         const participantsList = state.participants.length === 0
             ? '<p class="helper-text">NO PARTICIPANTS YET</p>'
@@ -565,7 +538,11 @@ function render() {
                 </div>
                 <p class="progress-text" id="adminProgressText"></p>
             </div>
-            <button type="button" class="button-secondary" onclick="showView('signup')" style="margin-bottom:18px;width:auto;padding:10px 18px;">⬅ BACK TO SIGN UP</button>
+            <p class="helper-text" style="text-align:center;margin-bottom:12px;">Signed in as ${escapeHtml(state.adminEmail)}</p>
+            <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:18px;">
+                <button type="button" class="button-secondary" onclick="handleAdminLogout()" style="width:auto;padding:10px 18px;">SIGN OUT</button>
+                <button type="button" class="button-secondary" onclick="showView('signup')" style="width:auto;padding:10px 18px;">⬅ BACK TO SIGN UP</button>
+            </div>
             <div id="adminMessage"></div>
 
             <div style="margin-bottom: 30px;">
@@ -605,26 +582,6 @@ function render() {
                 </div>
             </div>
 
-            <div class="section-box">
-                <h3>ADMIN PASSWORD</h3>
-                <p class="helper-text" style="margin-bottom: 15px;">UPDATE THE ADMIN PASSWORD. MINIMUM 6 CHARACTERS.</p>
-                <form onsubmit="handleChangePassword(event); return false;">
-                    <div>
-                        <label>CURRENT PASSWORD</label>
-                        <input type="password" name="currentPassword" required placeholder="CURRENT PASSWORD">
-                    </div>
-                    <div>
-                        <label>NEW PASSWORD</label>
-                        <input type="password" name="newPassword" required placeholder="NEW PASSWORD">
-                    </div>
-                    <div>
-                        <label>CONFIRM NEW PASSWORD</label>
-                        <input type="password" name="confirmPassword" required placeholder="CONFIRM NEW PASSWORD">
-                    </div>
-                    <button type="submit">UPDATE PASSWORD</button>
-                </form>
-            </div>
-
             <button onclick="runSecretSanta()">
                 📧 RUN SECRET SANTA
             </button>
@@ -656,15 +613,36 @@ function setupStaticListeners() {
     }
     const adminButton = document.getElementById('adminTab');
     if (adminButton) {
-        adminButton.addEventListener('click', () => showView('admin-login'));
+        adminButton.addEventListener('click', () => showView(state.isAdminAuthenticated ? 'admin' : 'admin-login'));
     }
 }
 
 async function initializeUI() {
     document.addEventListener('focusin', handleFocusScroll);
     setupStaticListeners();
+
+    onAuthStateChanged(auth, async (user) => {
+        try {
+            let claims = {};
+            if (user) {
+                const tokenResult = await user.getIdTokenResult(true);
+                claims = tokenResult.claims;
+            }
+            setAdminAuth(user, claims);
+            if (state.isAdminAuthenticated && state.view === 'admin-login') {
+                state.view = 'admin';
+            }
+            if (!state.isAdminAuthenticated && state.view === 'admin') {
+                state.view = 'admin-login';
+            }
+            render();
+        } catch (error) {
+            console.error('Auth state error:', error);
+        }
+    });
+
     await loadFromFirebase();
-    showView(state.view || 'signup');
+    render();
 }
 
 export {
@@ -673,7 +651,7 @@ export {
     toggleQuickPicks,
     handleSignup,
     handleAdminLogin,
-    handleChangePassword,
+    handleAdminLogout,
     updateConfig,
     runSecretSanta,
     clearAllParticipants,

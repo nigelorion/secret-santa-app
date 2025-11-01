@@ -15,11 +15,11 @@ const TOTAL_PARTICIPANTS_TARGET = 10;
 const state = {
     view: 'signup',
     isAdminAuthenticated: false,
+    adminEmail: '',
     participants: [],
     config: {
         historicalPairings: { year1: '', year2: '' },
-        emailConfig: { serviceId: '', templateId: '', publicKey: '' },
-        admin: { passwordHash: '' }
+        emailConfig: { serviceId: '', templateId: '', publicKey: '' }
     }
 };
 
@@ -41,21 +41,9 @@ async function loadFromFirebase() {
                 emailConfig: {
                     ...state.config.emailConfig,
                     ...(configData.emailConfig || {})
-                },
-                admin: {
-                    ...state.config.admin,
-                    ...(configData.admin || {})
                 }
             };
         }
-
-        const storedSession = localStorage.getItem('adminSession');
-        if (storedSession && state.config.admin.passwordHash && storedSession === state.config.admin.passwordHash) {
-            state.isAdminAuthenticated = true;
-        } else {
-            localStorage.removeItem('adminSession');
-        }
-        localStorage.removeItem('adminPassword');
     } catch (error) {
         console.error('Error loading from Firebase:', error);
         throw error;
@@ -71,10 +59,6 @@ async function saveParticipant(participant) {
     return participant;
 }
 
-async function saveConfig() {
-    await setDoc(doc(db, 'config', 'settings'), state.config);
-}
-
 function updateConfig(field, value) {
     if (field.includes('.')) {
         const [obj, key] = field.split('.');
@@ -88,6 +72,10 @@ function updateConfig(field, value) {
         state.config[field] = value;
     }
     return saveConfig();
+}
+
+async function saveConfig() {
+    await setDoc(doc(db, 'config', 'settings'), state.config);
 }
 
 async function clearAllParticipants() {
@@ -113,15 +101,10 @@ function parseHistoricalPairings() {
     return pairings;
 }
 
-async function hashPassword(password) {
-    if (window.crypto && window.crypto.subtle) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(password);
-        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
-    }
-    return password;
+function setAdminAuth(user, claims = {}) {
+    const isAdmin = !!(user && claims.admin);
+    state.isAdminAuthenticated = isAdmin;
+    state.adminEmail = isAdmin ? (user.email || '') : '';
 }
 
 export {
@@ -133,5 +116,5 @@ export {
     updateConfig,
     clearAllParticipants,
     parseHistoricalPairings,
-    hashPassword
+    setAdminAuth
 };
