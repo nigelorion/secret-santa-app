@@ -352,65 +352,148 @@ async function runSecretSanta() {
         }
     });
 
-    const MAX_ATTEMPTS = 200;
+    const MAX_ATTEMPTS = 400;
     let assignments = null;
 
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        const shuffled = [...state.participants].sort(() => Math.random() - 0.5);
-        const available = [...shuffled];
-        const proposed = [];
-        let failed = false;
+    const normalizedParticipants = state.participants
+        .map(p => ({
+            raw: p,
+            lowerName: (p.name || '').trim().toLowerCase()
+        }))
+        .filter(p => p.lowerName);
 
-        for (const giver of shuffled) {
-            const receiverIndex = available.findIndex(r => {
-                if (r.name === giver.name) return false;
-                const giverSpouse = spouseMap[giver.name];
-                if (giverSpouse && r.name?.toLowerCase() === giverSpouse.toLowerCase()) return false;
+    if (normalizedParticipants.length !== state.participants.length) {
+        document.getElementById('adminMessage').innerHTML = showMessage('All participants need a name before assignments can be created.', 'error');
+        return;
+    }
 
-                const recentReceivers = historicalPairs
-                    .filter(p => p.giver?.toLowerCase() === giver.name?.toLowerCase())
-                    .map(p => p.receiver.toLowerCase());
+    const historicalMap = new Map();
+    historicalPairs.forEach(pair => {
+        const giverKey = (pair.giver || '').trim().toLowerCase();
+        const receiverKey = (pair.receiver || '').trim().toLowerCase();
+        if (!giverKey || !receiverKey) return;
+        if (!historicalMap.has(giverKey)) {
+            historicalMap.set(giverKey, new Set());
+        }
+        historicalMap.get(giverKey).add(receiverKey);
+    });
 
-                if (recentReceivers.includes(r.name.toLowerCase())) return false;
-                return true;
-            });
+    const disallowedMap = new Map();
+    normalizedParticipants.forEach(({ raw, lowerName }) => {
+        const disallowed = new Set();
+        disallowed.add(lowerName);
+        const spouse = spouseMap[raw.name];
+        if (spouse) {
+            disallowed.add(spouse.trim().toLowerCase());
+        }
+        const historicalReceivers = historicalMap.get(lowerName);
+        if (historicalReceivers) {
+            historicalReceivers.forEach(name => disallowed.add(name));
+        }
+        disallowedMap.set(lowerName, disallowed);
+    });
 
-            if (receiverIndex === -1) {
-                failed = true;
-                break;
-            }
+    function shuffleInPlace(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
 
-            const receiver = available[receiverIndex];
-            proposed.push({ giver, receiver });
-            available.splice(receiverIndex, 1);
+    function buildAssignmentAttempt() {
+        const baseOptions = new Map();
+        normalizedParticipants.forEach(giver => {
+            const disallowed = disallowedMap.get(giver.lowerName) || new Set();
+            const allowed = normalizedParticipants.filter(receiver => !disallowed.has(receiver.lowerName));
+            baseOptions.set(giver.lowerName, allowed);
+        });
+
+        const hasImpossibleGiver = [...baseOptions.values()].some(options => options.length === 0);
+        if (hasImpossibleGiver) {
+            return null;
         }
 
-        if (!failed) {
-            const pairs = new Map();
-            proposed.forEach(pair => {
-                const giverName = pair.giver?.name?.toLowerCase();
-                const receiverName = pair.receiver?.name?.toLowerCase();
-                if (giverName && receiverName) {
-                    pairs.set(giverName, receiverName);
-                }
-            });
-
-            const hasMutualPairs = proposed.some(pair => {
-                const giverName = pair.giver?.name?.toLowerCase();
-                const receiverName = pair.receiver?.name?.toLowerCase();
-                if (!giverName || !receiverName) return false;
-                return pairs.get(receiverName) === giverName;
-            });
-
-            if (!hasMutualPairs) {
-                assignments = proposed;
-                break;
+        const giverOrder = [...normalizedParticipants];
+        shuffleInPlace(giverOrder);
+        giverOrder.sort((a, b) => {
+            const aOptions = baseOptions.get(a.lowerName).length;
+            const bOptions = baseOptions.get(b.lowerName).length;
+            if (aOptions === bOptions) {
+                return Math.random() - 0.5;
             }
+            return aOptions - bOptions;
+        });
+
+        const usedReceivers = new Set();
+        const giverAssignments = new Map();
+        const proposed = [];
+
+        function backtrack(index) {
+            if (index === giverOrder.length) {
+                return true;
+            }
+
+            const giver = giverOrder[index];
+            const choices = baseOptions.get(giver.lowerName)
+                .filter(receiver => {
+                    if (usedReceivers.has(receiver.lowerName)) return false;
+                    const receiverPrevious = giverAssignments.get(receiver.lowerName);
+                    if (receiverPrevious && receiverPrevious === giver.lowerName) return false;
+                    return true;
+                });
+
+            if (choices.length === 0) {
+                return false;
+            }
+
+            shuffleInPlace(choices);
+
+            for (const receiver of choices) {
+                usedReceivers.add(receiver.lowerName);
+                giverAssignments.set(giver.lowerName, receiver.lowerName);
+                proposed.push({ giver: giver.raw, receiver: receiver.raw });
+
+                if (backtrack(index + 1)) {
+                    return true;
+                }
+
+                proposed.pop();
+                giverAssignments.delete(giver.lowerName);
+                usedReceivers.delete(receiver.lowerName);
+            }
+
+            return false;
+        }
+
+        return backtrack(0) ? proposed : null;
+    }
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const proposed = buildAssignmentAttempt();
+        if (proposed) {
+            assignments = proposed;
+            break;
         }
     }
 
     if (!assignments) {
         document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
+        return;
+    }
+
+    const previewList = assignments.map(pair => `${pair.giver.name} → ${pair.receiver.name}`).join('\n');
+    const shouldSend = window.confirm(
+        `Ready to send Secret Santa emails?\n\nAssignments preview:\n${previewList}\n\nSelect OK to send the emails now.\nSelect Cancel to preview without sending.`
+    );
+
+    if (!shouldSend) {
+        console.table(assignments.map(pair => ({
+            Giver: pair.giver.name,
+            'Giver Email': pair.giver.email,
+            Receiver: pair.receiver.name
+        })));
+        document.getElementById('adminMessage').innerHTML = showMessage('Preview only — emails were not sent. Check the console for the full assignment list.', 'info');
         return;
     }
 
