@@ -313,6 +313,12 @@ function scrollToSignup() {
         } else {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+        setTimeout(() => {
+            const nameField = document.querySelector('form#signupForm input[name="name"]');
+            if (nameField) {
+                nameField.focus();
+            }
+        }, 250);
     };
 
     if (state.view !== 'signup') {
@@ -654,12 +660,6 @@ function render() {
             </form>
         `;
         toggleQuickPicks(false);
-        setTimeout(() => {
-            const topAnchor = document.getElementById('signupFormTop');
-            if (topAnchor) {
-                topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }, 100);
     } else if (state.view === 'admin-login' && !state.isAdminAuthenticated) {
         const hasPassword = Boolean(state.config.admin.passwordHash);
         content.innerHTML = `
