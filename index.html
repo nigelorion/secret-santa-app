@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Santa Organizer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_w3zUhizJZsjdtrzTkq_lAePsvAFVM_o",
+            authDomain: "secret-manta-ff7b6.firebaseapp.com",
+            projectId: "secret-manta-ff7b6",
+            storageBucket: "secret-manta-ff7b6.firebasestorage.app",
+            messagingSenderId: "138324851995",
+            appId: "1:138324851995:web:e82a5ec02d2e81c0e6e7be",
+            measurementId: "G-5D1MW1MP7C"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db;
+        window.firestoreModules = { collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc };
+
+        window.addEventListener('load', () => {
+            if (window.initApp) window.initApp();
+        });
+    </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-6">
+    <div id="app" class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-xl p-8">
+            <div class="flex items-center justify-center mb-8">
+                <span class="text-5xl mr-3">🎁</span>
+                <h1 class="text-4xl font-bold text-gray-800">Secret Santa Organizer</h1>
+            </div>
+
+            <div class="flex gap-2 mb-6 border-b">
+                <button onclick="showView('signup')" id="signupTab" class="px-4 py-2 font-medium text-red-600 border-b-2 border-red-600">
+                    👥 Sign Up
+                </button>
+                <button onclick="showView('admin-login')" id="adminTab" class="px-4 py-2 font-medium text-gray-600">
+                    ⚙️ Admin
+                </button>
+            </div>
+
+            <div id="content"></div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            view: 'signup',
+            isAdminAuthenticated: false,
+            adminPassword: '',
+            participants: [],
+            config: {
+                historicalPairings: { year1: '', year2: '' },
+                emailConfig: { serviceId: '', templateId: '', publicKey: '' }
+            }
+        };
+
+        window.initApp = async function() {
+            await loadFromFirebase();
+            render();
+        };
+
+        async function loadFromFirebase() {
+            try {
+                const { collection, getDocs, getDoc, doc } = window.firestoreModules;
+                
+                const participantsSnapshot = await getDocs(collection(window.db, 'participants'));
+                state.participants = participantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const configDoc = await getDoc(doc(window.db, 'config', 'settings'));
+                if (configDoc.exists()) {
+                    state.config = configDoc.data();
+                }
+
+                state.adminPassword = localStorage.getItem('adminPassword') || '';
+            } catch (error) {
+                console.error('Error loading from Firebase:', error);
+            }
+        }
+
+        async function saveParticipant(participant) {
+            try {
+                const { addDoc, collection } = window.firestoreModules;
+                const docRef = await addDoc(collection(window.db, 'participants'), participant);
+                participant.id = docRef.id;
+                state.participants.push(participant);
+            } catch (error) {
+                console.error('Error saving participant:', error);
+                throw error;
+            }
+        }
+
+        async function saveConfig() {
+            try {
+                const { setDoc, doc } = window.firestoreModules;
+                await setDoc(doc(window.db, 'config', 'settings'), state.config);
+            } catch (error) {
+                console.error('Error saving config:', error);
+            }
+        }
+
+        function showMessage(message, type) {
+            const colors = {
+                success: 'bg-green-50 border-green-200 text-green-800',
+                error: 'bg-red-50 border-red-200 text-red-800',
+                info: 'bg-blue-50 border-blue-200 text-blue-800'
+            };
+            return `<div class="mb-4 p-4 rounded-lg border ${colors[type]}">${message}</div>`;
+        }
+
+        function showView(view) {
+            state.view = view;
+            document.getElementById('signupTab').className = view === 'signup' ? 'px-4 py-2 font-medium text-red-600 border-b-2 border-red-600' : 'px-4 py-2 font-medium text-gray-600';
+            document.getElementById('adminTab').className = (view === 'admin' || view === 'admin-login') ? 'px-4 py-2 font-medium text-red-600 border-b-2 border-red-600' : 'px-4 py-2 font-medium text-gray-600';
+            render();
+        }
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const name = formData.get('name');
+            const email = formData.get('email');
+            const wishlist = formData.get('wishlist');
+            const spouseName = formData.get('spouseName');
+
+            if (state.participants.some(p => p.email.toLowerCase() === email.toLowerCase() || p.name.toLowerCase() === name.toLowerCase())) {
+                document.getElementById('signupMessage').innerHTML = showMessage('Oops! You are already signed up this year. If you need to update your info, contact the organizer.', 'error');
+                return;
+            }
+
+            try {
+                await saveParticipant({ name, email, wishlist, spouseName, timestamp: Date.now() });
+                event.target.reset();
+                document.getElementById('signupMessage').innerHTML = showMessage('🎉 Successfully signed up! You\'ll receive an email once Secret Santa assignments are made.', 'success');
+                setTimeout(() => { document.getElementById('signupMessage').innerHTML = ''; }, 5000);
+            } catch (error) {
+                document.getElementById('signupMessage').innerHTML = showMessage('Error signing up. Please try again.', 'error');
+            }
+        }
+
+        function handleAdminLogin(event) {
+            event.preventDefault();
+            const password = document.getElementById('passwordInput').value;
+            
+            if (!state.adminPassword) {
+                if (password.length >= 6) {
+                    state.adminPassword = password;
+                    localStorage.setItem('adminPassword', password);
+                    state.isAdminAuthenticated = true;
+                    showView('admin');
+                } else {
+                    alert('Password must be at least 6 characters');
+                }
+            } else {
+                if (password === state.adminPassword) {
+                    state.isAdminAuthenticated = true;
+                    showView('admin');
+                } else {
+                    alert('Incorrect password!');
+                }
+            }
+        }
+
+        function parseHistoricalPairings() {
+            const pairings = [];
+            [state.config.historicalPairings.year1, state.config.historicalPairings.year2].forEach(yearData => {
+                if (!yearData || !yearData.trim()) return;
+                const pairs = yearData.split(/[,\n]/).map(p => p.trim()).filter(p => p);
+                pairs.forEach(pair => {
+                    const match = pair.match(/(.+?)\s*[-→>]\s*(.+)/);
+                    if (match) {
+                        pairings.push({ giver: match[1].trim(), receiver: match[2].trim() });
+                    }
+                });
+            });
+            return pairings;
+        }
+
+        async function runSecretSanta() {
+            if (state.participants.length < 3) {
+                document.getElementById('adminMessage').innerHTML = showMessage('Need at least 3 participants!', 'error');
+                return;
+            }
+
+            if (!state.config.emailConfig.serviceId || !state.config.emailConfig.templateId || !state.config.emailConfig.publicKey) {
+                document.getElementById('adminMessage').innerHTML = showMessage('Please configure EmailJS settings first!', 'error');
+                return;
+            }
+
+            const historicalPairs = parseHistoricalPairings();
+            const spouseMap = {};
+            state.participants.forEach(p => {
+                if (p.spouseName) {
+                    spouseMap[p.name] = p.spouseName;
+                    spouseMap[p.spouseName] = p.name;
+                }
+            });
+
+            const shuffled = [...state.participants].sort(() => Math.random() - 0.5);
+            const assignments = [];
+            const available = [...shuffled];
+
+            for (let giver of shuffled) {
+                const receiverIndex = available.findIndex(r => {
+                    if (r.name === giver.name) return false;
+                    const giverSpouse = spouseMap[giver.name];
+                    if (giverSpouse && r.name.toLowerCase() === giverSpouse.toLowerCase()) return false;
+                    
+                    const recentReceivers = historicalPairs
+                        .filter(p => p.giver.toLowerCase() === giver.name.toLowerCase())
+                        .map(p => p.receiver.toLowerCase());
+                    
+                    if (recentReceivers.includes(r.name.toLowerCase())) return false;
+                    return true;
+                });
+
+                if (receiverIndex === -1) {
+                    document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
+                    return;
+                }
+
+                const receiver = available[receiverIndex];
+                assignments.push({ giver, receiver });
+                available.splice(receiverIndex, 1);
+            }
+
+            await sendEmails(assignments);
+        }
+
+        async function sendEmails(assignments) {
+            try {
+                emailjs.init(state.config.emailConfig.publicKey);
+                
+                document.getElementById('adminMessage').innerHTML = showMessage('Sending emails...', 'info');
+                
+                let successCount = 0;
+                let failCount = 0;
+                
+                for (const assignment of assignments) {
+                    try {
+                        await emailjs.send(
+                            state.config.emailConfig.serviceId,
+                            state.config.emailConfig.templateId,
+                            {
+                                to_name: assignment.giver.name,
+                                to_email: assignment.giver.email,
+                                receiver_name: assignment.receiver.name,
+                                receiver_wishlist: assignment.receiver.wishlist || 'No wish list provided yet'
+                            }
+                        );
+                        successCount++;
+                    } catch (error) {
+                        console.error(`Failed to send email to ${assignment.giver.name}:`, error);
+                        failCount++;
+                    }
+                }
+                
+                if (failCount === 0) {
+                    document.getElementById('adminMessage').innerHTML = showMessage(`🎉 Success! ${successCount} Secret Santa emails have been sent! Check your inbox for your assignment!`, 'success');
+                } else {
+                    document.getElementById('adminMessage').innerHTML = showMessage(`⚠️ Partially complete: ${successCount} emails sent, ${failCount} failed. Check console for details.`, 'error');
+                }
+            } catch (error) {
+                console.error('Email sending error:', error);
+                document.getElementById('adminMessage').innerHTML = showMessage('❌ Failed to send emails. Please check your EmailJS configuration and try again.', 'error');
+            }
+        }
+
+        async function updateConfig(field, value) {
+            if (field.includes('.')) {
+                const [obj, key] = field.split('.');
+                state.config[obj][key] = value;
+            } else {
+                state.config.emailConfig[field] = value;
+            }
+            await saveConfig();
+        }
+
+        function render() {
+            const content = document.getElementById('content');
+            
+            if (state.view === 'signup') {
+                content.innerHTML = `
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Join Secret Santa</h2>
+                    <div id="signupMessage"></div>
+                    <form onsubmit="handleSignup(event); return false;" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Your Name *</label>
+                            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="John Doe">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Your Email *</label>
+                            <input type="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="john@example.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Your Wish List</label>
+                            <textarea name="wishlist" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="List some gift ideas..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Spouse Name *</label>
+                            <input type="text" name="spouseName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="Enter your spouse's name">
+                            <p class="text-sm text-gray-500 mt-1">You won't be matched with your spouse</p>
+                        </div>
+                        <button type="submit" class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors">
+                            Sign Me Up! 🎅
+                        </button>
+                    </form>
+                `;
+            } else if (state.view === 'admin-login' && !state.isAdminAuthenticated) {
+                content.innerHTML = `
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Admin Login</h2>
+                    <form onsubmit="handleAdminLogin(event); return false;" class="space-y-4">
+                        <p class="text-gray-600">${!state.adminPassword ? 'First time setup: Create your admin password' : 'Enter admin password to continue'}</p>
+                        <input type="password" id="passwordInput" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="${!state.adminPassword ? 'Create admin password' : 'Enter admin password'}">
+                        <button type="submit" class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">
+                            ${!state.adminPassword ? 'Set Password & Continue' : 'Login'}
+                        </button>
+                    </form>
+                `;
+            } else if (state.view === 'admin' || (state.view === 'admin-login' && state.isAdminAuthenticated)) {
+                state.view = 'admin';
+                const participantsList = state.participants.length === 0 
+                    ? '<p class="text-gray-500">No participants yet</p>'
+                    : state.participants.map(p => `
+                        <div class="bg-gray-50 p-3 rounded">
+                            <p class="font-medium">${p.name}</p>
+                            <p class="text-sm text-gray-600">${p.email}</p>
+                            ${p.spouseName ? `<p class="text-sm text-gray-500">Spouse: ${p.spouseName}</p>` : ''}
+                        </div>
+                    `).join('');
+
+                content.innerHTML = `
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Admin Panel</h2>
+                    <div id="adminMessage"></div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-2">Participants (${state.participants.length})</h3>
+                        <div class="space-y-2">${participantsList}</div>
+                    </div>
+
+                    <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">Historical Pairings</h3>
+                        <p class="text-sm text-gray-600 mb-3">Enter previous years' assignments to avoid repeats (format: "Giver → Receiver" or "Giver - Receiver", comma or newline separated)</p>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">2023 Pairings</label>
+                                <textarea onchange="updateConfig('historicalPairings.year1', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" rows="2" placeholder="John → Sarah, Mary → Tom">${state.config.historicalPairings.year1 || ''}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">2024 Pairings</label>
+                                <textarea onchange="updateConfig('historicalPairings.year2', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" rows="2" placeholder="John → Mary, Sarah → John">${state.config.historicalPairings.year2 || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">EmailJS Configuration</h3>
+                        <p class="text-sm text-gray-600 mb-3">Enter your EmailJS credentials</p>
+                        <div class="space-y-3">
+                            <input type="text" value="${state.config.emailConfig.serviceId || ''}" onchange="updateConfig('serviceId', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Service ID">
+                            <input type="text" value="${state.config.emailConfig.templateId || ''}" onchange="updateConfig('templateId', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Template ID">
+                            <input type="text" value="${state.config.emailConfig.publicKey || ''}" onchange="updateConfig('publicKey', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Public Key">
+                        </div>
+                    </div>
+
+                    <button onclick="runSecretSanta()" class="w-full bg-green-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors flex items-center justify-center">
+                        📧 Run Secret Santa & Send Emails
+                    </button>
+                    
+                    <p class="text-sm text-gray-500 mt-2 text-center">
+                        ⚠️ Once you click this, assignments will be made and emails sent immediately. You won't see who got whom!
+                    </p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
