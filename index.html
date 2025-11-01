@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -16,12 +16,15 @@
         }
 
         body {
-            font-family: 'Press Start 2P', cursive;
-            background: linear-gradient(180deg, #1a3a2e 0%, #2d5f4d 50%, #1a3a2e 100%);
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(180deg, #123428 0%, #255643 50%, #123428 100%);
+            color: #e8fff6;
             min-height: 100vh;
             padding: 20px;
             position: relative;
             overflow-x: hidden;
+            font-size: 16px;
+            line-height: 1.6;
         }
 
         /* Pixel rain effect */
@@ -71,8 +74,9 @@
 
         .header h1 {
             color: #8fedd4;
-            font-size: 24px;
-            line-height: 1.6;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 28px;
+            line-height: 1.5;
             text-shadow: 3px 3px 0 #1a3a2e;
             margin-bottom: 10px;
         }
@@ -97,8 +101,9 @@
         }
 
         .tab-button {
-            font-family: 'Press Start 2P', cursive;
-            font-size: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 13px;
             padding: 15px 20px;
             background: #1a3a2e;
             color: #8fedd4;
@@ -122,23 +127,25 @@
 
         h2 {
             color: #8fedd4;
-            font-size: 18px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 20px;
             margin-bottom: 25px;
             text-shadow: 2px 2px 0 #1a3a2e;
         }
 
         h3 {
             color: #5fb89d;
-            font-size: 14px;
+            font-size: 16px;
             margin-bottom: 15px;
         }
 
         label {
             display: block;
             color: #8fedd4;
-            font-size: 10px;
+            font-size: 13px;
+            font-weight: 600;
             margin-bottom: 8px;
-            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         input, textarea {
@@ -147,8 +154,8 @@
             background: #0a1f1a;
             border: 3px solid #2d5f4d;
             color: #8fedd4;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 10px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
             margin-bottom: 20px;
             transition: all 0.2s;
         }
@@ -164,8 +171,9 @@
         }
 
         button {
-            font-family: 'Press Start 2P', cursive;
-            font-size: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
             padding: 15px 30px;
             background: #4a9d7f;
             color: #0a1f1a;
@@ -192,8 +200,8 @@
             padding: 15px;
             margin-bottom: 20px;
             border: 3px solid;
-            font-size: 10px;
-            line-height: 1.6;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
         .message.success {
@@ -222,7 +230,7 @@
         }
 
         .participant-card p {
-            font-size: 10px;
+            font-size: 14px;
             color: #8fedd4;
             margin-bottom: 5px;
         }
@@ -243,14 +251,14 @@
         }
 
         .helper-text {
-            font-size: 8px;
-            color: #5fb89d;
+            font-size: 12px;
+            color: #9adbc7;
             line-height: 1.4;
             margin-top: 5px;
         }
 
         .warning-text {
-            font-size: 9px;
+            font-size: 13px;
             color: #9d9d4a;
             text-align: center;
             margin-top: 15px;
@@ -325,11 +333,11 @@
         let state = {
             view: 'signup',
             isAdminAuthenticated: false,
-            adminPassword: '',
             participants: [],
             config: {
                 historicalPairings: { year1: '', year2: '' },
-                emailConfig: { serviceId: '', templateId: '', publicKey: '' }
+                emailConfig: { serviceId: '', templateId: '', publicKey: '' },
+                admin: { passwordHash: '' }
             }
         };
 
@@ -337,6 +345,17 @@
             await loadFromFirebase();
             render();
         };
+
+        async function hashPassword(password) {
+            if (window.crypto && window.crypto.subtle) {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(password);
+                const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+            return password;
+        }
 
         async function loadFromFirebase() {
             try {
@@ -347,10 +366,32 @@
 
                 const configDoc = await getDoc(doc(window.db, 'config', 'settings'));
                 if (configDoc.exists()) {
-                    state.config = configDoc.data();
+                    const configData = configDoc.data();
+                    state.config = {
+                        ...state.config,
+                        ...configData,
+                        historicalPairings: {
+                            ...state.config.historicalPairings,
+                            ...(configData.historicalPairings || {})
+                        },
+                        emailConfig: {
+                            ...state.config.emailConfig,
+                            ...(configData.emailConfig || {})
+                        },
+                        admin: {
+                            ...state.config.admin,
+                            ...(configData.admin || {})
+                        }
+                    };
                 }
 
-                state.adminPassword = localStorage.getItem('adminPassword') || '';
+                const storedSession = localStorage.getItem('adminSession');
+                if (storedSession && state.config.admin.passwordHash && storedSession === state.config.admin.passwordHash) {
+                    state.isAdminAuthenticated = true;
+                } else {
+                    localStorage.removeItem('adminSession');
+                }
+                localStorage.removeItem('adminPassword');
             } catch (error) {
                 console.error('Error loading from Firebase:', error);
             }
@@ -416,25 +457,93 @@
             }
         }
 
-        function handleAdminLogin(event) {
+        async function handleAdminLogin(event) {
             event.preventDefault();
-            const password = document.getElementById('passwordInput').value;
-            
-            if (!state.adminPassword) {
-                if (password.length >= 6) {
-                    state.adminPassword = password;
-                    localStorage.setItem('adminPassword', password);
-                    state.isAdminAuthenticated = true;
-                    showView('admin');
-                } else {
-                    alert('Password must be at least 6 characters');
+            const passwordInput = document.getElementById('passwordInput');
+            const password = passwordInput.value.trim();
+            const messageContainer = document.getElementById('adminLoginMessage');
+
+            if (!password) {
+                if (messageContainer) {
+                    messageContainer.innerHTML = showMessage('Please enter your password.', 'error');
                 }
-            } else {
-                if (password === state.adminPassword) {
+                return;
+            }
+            
+            if (!state.config.admin.passwordHash) {
+                if (messageContainer) {
+                    messageContainer.innerHTML = showMessage('Admin password is not configured. Please contact the organizer to set it up in Firebase.', 'error');
+                }
+                return;
+            }
+
+            try {
+                const hashed = await hashPassword(password);
+                if (hashed === state.config.admin.passwordHash) {
                     state.isAdminAuthenticated = true;
+                    localStorage.setItem('adminSession', hashed);
+                    passwordInput.value = '';
+                    if (messageContainer) {
+                        messageContainer.innerHTML = showMessage('Access granted.', 'success');
+                    }
                     showView('admin');
                 } else {
-                    alert('Incorrect password!');
+                    if (messageContainer) {
+                        messageContainer.innerHTML = showMessage('Incorrect password. Please try again.', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Admin login error:', error);
+                if (messageContainer) {
+                    messageContainer.innerHTML = showMessage('Unable to verify password in this browser.', 'error');
+                }
+            }
+        }
+
+        async function handleChangePassword(event) {
+            event.preventDefault();
+            const form = event.target;
+            const currentPassword = form.currentPassword.value.trim();
+            const newPassword = form.newPassword.value.trim();
+            const confirmPassword = form.confirmPassword.value.trim();
+            const messageContainer = document.getElementById('adminMessage');
+
+            if (!newPassword || newPassword.length < 6) {
+                if (messageContainer) {
+                    messageContainer.innerHTML = showMessage('New password must be at least 6 characters long.', 'error');
+                }
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                if (messageContainer) {
+                    messageContainer.innerHTML = showMessage('New password and confirmation do not match.', 'error');
+                }
+                return;
+            }
+
+            try {
+                const currentHash = await hashPassword(currentPassword);
+                if (state.config.admin.passwordHash && currentHash !== state.config.admin.passwordHash) {
+                    if (messageContainer) {
+                        messageContainer.innerHTML = showMessage('Current password is incorrect.', 'error');
+                    }
+                    return;
+                }
+
+                const newHash = await hashPassword(newPassword);
+                state.config.admin.passwordHash = newHash;
+                await saveConfig();
+                localStorage.setItem('adminSession', newHash);
+                form.reset();
+
+                if (messageContainer) {
+                    messageContainer.innerHTML = showMessage('Admin password updated successfully.', 'success');
+                }
+            } catch (error) {
+                console.error('Password update error:', error);
+                if (messageContainer) {
+                    messageContainer.innerHTML = showMessage('Could not update password. Please try again.', 'error');
                 }
             }
         }
@@ -547,9 +656,14 @@
         async function updateConfig(field, value) {
             if (field.includes('.')) {
                 const [obj, key] = field.split('.');
+                if (!state.config[obj]) {
+                    state.config[obj] = {};
+                }
                 state.config[obj][key] = value;
-            } else {
+            } else if (['serviceId', 'templateId', 'publicKey'].includes(field)) {
                 state.config.emailConfig[field] = value;
+            } else {
+                state.config[field] = value;
             }
             await saveConfig();
         }
@@ -583,17 +697,19 @@
                     </form>
                 `;
             } else if (state.view === 'admin-login' && !state.isAdminAuthenticated) {
+                const hasPassword = Boolean(state.config.admin.passwordHash);
                 content.innerHTML = `
                     <h2>ADMIN LOGIN</h2>
+                    <div id="adminLoginMessage"></div>
                     <form onsubmit="handleAdminLogin(event); return false;">
-                        <p class="helper-text" style="margin-bottom: 20px;">${!state.adminPassword ? 'FIRST TIME SETUP: CREATE YOUR ADMIN PASSWORD' : 'ENTER ADMIN PASSWORD TO CONTINUE'}</p>
-                        <input type="password" id="passwordInput" required placeholder="${!state.adminPassword ? 'CREATE PASSWORD' : 'ENTER PASSWORD'}">
-                        <button type="submit">
-                            ${!state.adminPassword ? 'SET PASSWORD' : 'LOGIN'}
+                        <p class="helper-text" style="margin-bottom: 20px;">${hasPassword ? 'Enter the secret password to access the admin dashboard.' : 'No admin password is set. Configure one securely in Firebase before enabling access.'}</p>
+                        <input type="password" id="passwordInput" ${hasPassword ? '' : 'disabled'} required placeholder="${hasPassword ? 'ENTER PASSWORD' : 'PASSWORD NOT CONFIGURED'}">
+                        <button type="submit" ${hasPassword ? '' : 'disabled'}>
+                            LOGIN
                         </button>
                     </form>
                 `;
-            } else if (state.view === 'admin' || (state.view === 'admin-login' && state.isAdminAuthenticated)) {
+            } else if (state.isAdminAuthenticated && (state.view === 'admin' || state.view === 'admin-login')) {
                 state.view = 'admin';
                 const participantsList = state.participants.length === 0 
                     ? '<p class="helper-text">NO PARTICIPANTS YET</p>'
@@ -642,6 +758,26 @@
                             <label>PUBLIC KEY</label>
                             <input type="text" value="${state.config.emailConfig.publicKey || ''}" onchange="updateConfig('publicKey', this.value)" placeholder="PUBLIC_KEY">
                         </div>
+                    </div>
+
+                    <div class="section-box">
+                        <h3>ADMIN PASSWORD</h3>
+                        <p class="helper-text" style="margin-bottom: 15px;">UPDATE THE ADMIN PASSWORD. MINIMUM 6 CHARACTERS.</p>
+                        <form onsubmit="handleChangePassword(event); return false;">
+                            <div>
+                                <label>CURRENT PASSWORD</label>
+                                <input type="password" name="currentPassword" required placeholder="CURRENT PASSWORD">
+                            </div>
+                            <div>
+                                <label>NEW PASSWORD</label>
+                                <input type="password" name="newPassword" required placeholder="NEW PASSWORD">
+                            </div>
+                            <div>
+                                <label>CONFIRM NEW PASSWORD</label>
+                                <input type="password" name="confirmPassword" required placeholder="CONFIRM NEW PASSWORD">
+                            </div>
+                            <button type="submit">UPDATE PASSWORD</button>
+                        </form>
                     </div>
 
                     <button onclick="runSecretSanta()">
