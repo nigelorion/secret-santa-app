@@ -1,3 +1,4 @@
+import { db, collection, getCountFromServer, auth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from './firebase.js';
 import {
     state,
     TOTAL_PARTICIPANTS_TARGET,
@@ -8,12 +9,6 @@ import {
     parseHistoricalPairings,
     setAdminAuth
 } from './state.js';
-import {
-    auth,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged
-} from './firebase.js';
 
 function handleFocusScroll(event) {
     const target = event.target;
@@ -172,6 +167,17 @@ async function handleSignup(event) {
     if (typeof navigator !== 'undefined' && navigator && 'onLine' in navigator && !navigator.onLine) {
         document.getElementById('signupMessage').innerHTML = showMessage('Looks like you\'re offline. Reconnect to the internet, then try signing up again.', 'error');
         return;
+    }
+
+    try {
+        const snapshot = await getCountFromServer(collection(db, 'participants'));
+        const currentCount = snapshot.data().count || 0;
+        if (currentCount >= TOTAL_PARTICIPANTS_TARGET) {
+            document.getElementById('signupMessage').innerHTML = showMessage('Sign-ups are full this year. If you need to update your info, contact the organizer.', 'error');
+            return;
+        }
+    } catch (error) {
+        console.error('Participant count check failed:', error);
     }
 
     const requiredMissing = [];
@@ -346,32 +352,48 @@ async function runSecretSanta() {
         }
     });
 
-    const shuffled = [...state.participants].sort(() => Math.random() - 0.5);
-    const assignments = [];
-    const available = [...shuffled];
+    const MAX_ATTEMPTS = 200;
+    let assignments = null;
 
-    for (const giver of shuffled) {
-        const receiverIndex = available.findIndex(r => {
-            if (r.name === giver.name) return false;
-            const giverSpouse = spouseMap[giver.name];
-            if (giverSpouse && r.name?.toLowerCase() === giverSpouse.toLowerCase()) return false;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const shuffled = [...state.participants].sort(() => Math.random() - 0.5);
+        const available = [...shuffled];
+        const proposed = [];
+        let failed = false;
 
-            const recentReceivers = historicalPairs
-                .filter(p => p.giver?.toLowerCase() === giver.name?.toLowerCase())
-                .map(p => p.receiver.toLowerCase());
+        for (const giver of shuffled) {
+            const receiverIndex = available.findIndex(r => {
+                if (r.name === giver.name) return false;
+                const giverSpouse = spouseMap[giver.name];
+                if (giverSpouse && r.name?.toLowerCase() === giverSpouse.toLowerCase()) return false;
 
-            if (recentReceivers.includes(r.name.toLowerCase())) return false;
-            return true;
-        });
+                const recentReceivers = historicalPairs
+                    .filter(p => p.giver?.toLowerCase() === giver.name?.toLowerCase())
+                    .map(p => p.receiver.toLowerCase());
 
-        if (receiverIndex === -1) {
-            document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
-            return;
+                if (recentReceivers.includes(r.name.toLowerCase())) return false;
+                return true;
+            });
+
+            if (receiverIndex === -1) {
+                failed = true;
+                break;
+            }
+
+            const receiver = available[receiverIndex];
+            proposed.push({ giver, receiver });
+            available.splice(receiverIndex, 1);
         }
 
-        const receiver = available[receiverIndex];
-        assignments.push({ giver, receiver });
-        available.splice(receiverIndex, 1);
+        if (!failed) {
+            assignments = proposed;
+            break;
+        }
+    }
+
+    if (!assignments) {
+        document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
+        return;
     }
 
     await sendEmails(assignments);
