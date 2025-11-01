@@ -7,6 +7,7 @@ import {
     handleAdminLogout,
     updateConfig,
     runSecretSanta,
+    sendPendingAssignments,
     clearAllParticipants,
     scrollToSignup
 } from './ui.js';
@@ -18,6 +19,7 @@ window.handleAdminLogin = handleAdminLogin;
 window.handleAdminLogout = handleAdminLogout;
 window.updateConfig = updateConfig;
 window.runSecretSanta = runSecretSanta;
+window.sendPendingAssignments = sendPendingAssignments;
 window.clearAllParticipants = clearAllParticipants;
 window.scrollToSignup = scrollToSignup;
 

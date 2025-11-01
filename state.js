@@ -17,6 +17,7 @@ const state = {
     isAdminAuthenticated: false,
     adminEmail: '',
     participants: [],
+    pendingAssignments: null,
     config: {
         historicalPairings: { year1: '', year2: '' },
         emailConfig: { serviceId: '', templateId: '', publicKey: '' }
@@ -52,6 +53,7 @@ async function loadFromFirebase(options = {}) {
         try {
             const participantsSnapshot = await getDocs(collection(db, 'participants'));
             state.participants = participantsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            state.pendingAssignments = null;
         } catch (error) {
             if (error.code === 'permission-denied') {
                 state.participants = [];
@@ -96,6 +98,7 @@ async function clearAllParticipants() {
     const deletions = snapshot.docs.map(d => deleteDoc(doc(db, 'participants', d.id)));
     await Promise.all(deletions);
     state.participants = [];
+    state.pendingAssignments = null;
     return true;
 }
 
@@ -118,6 +121,9 @@ function setAdminAuth(user, claims = {}) {
     const isAdmin = !!(user && claims.admin);
     state.isAdminAuthenticated = isAdmin;
     state.adminEmail = isAdmin ? (user.email || '') : '';
+    if (!isAdmin) {
+        state.pendingAssignments = null;
+    }
 }
 
 export {

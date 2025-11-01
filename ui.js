@@ -338,11 +338,6 @@ async function runSecretSanta() {
         return;
     }
 
-    if (!state.config.emailConfig.serviceId || !state.config.emailConfig.templateId || !state.config.emailConfig.publicKey) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Please configure EmailJS settings first!', 'error');
-        return;
-    }
-
     const historicalPairs = parseAssignments();
     const spouseMap = {};
     state.participants.forEach(p => {
@@ -479,25 +474,60 @@ async function runSecretSanta() {
 
     if (!assignments) {
         document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
+        state.pendingAssignments = null;
+        render();
         return;
     }
 
-    const previewList = assignments.map(pair => `${pair.giver.name} → ${pair.receiver.name}`).join('\n');
-    const shouldSend = window.confirm(
-        `Ready to send Secret Santa emails?\n\nAssignments preview:\n${previewList}\n\nSelect OK to send the emails now.\nSelect Cancel to preview without sending.`
-    );
+    state.pendingAssignments = assignments;
+    console.table(assignments.map(pair => ({
+        Giver: pair.giver.name,
+        'Giver Email': pair.giver.email,
+        Receiver: pair.receiver.name
+    })));
 
+    render();
+
+    const adminMessage = document.getElementById('adminMessage');
+    if (adminMessage) {
+        const emailConfigReady = state.config.emailConfig.serviceId && state.config.emailConfig.templateId && state.config.emailConfig.publicKey;
+        const hint = emailConfigReady
+            ? 'Review the preview below, then click SEND EMAILS when you\'re ready.'
+            : 'Preview ready. Enter your EmailJS settings before sending.';
+        adminMessage.innerHTML = showMessage(`Assignments generated! ${hint}`, emailConfigReady ? 'info' : 'error');
+    }
+}
+
+async function sendPendingAssignments() {
+    if (!state.isAdminAuthenticated) {
+        document.getElementById('adminMessage').innerHTML = showMessage('Admin sign-in required to send assignments.', 'error');
+        return;
+    }
+
+    if (!state.pendingAssignments || state.pendingAssignments.length === 0) {
+        document.getElementById('adminMessage').innerHTML = showMessage('Generate a preview first, then click SEND EMAILS.', 'info');
+        return;
+    }
+
+    if (!state.config.emailConfig.serviceId || !state.config.emailConfig.templateId || !state.config.emailConfig.publicKey) {
+        document.getElementById('adminMessage').innerHTML = showMessage('Please enter your EmailJS settings before sending.', 'error');
+        return;
+    }
+
+    const shouldSend = window.confirm('Send Secret Santa assignments to everyone now?');
     if (!shouldSend) {
-        console.table(assignments.map(pair => ({
-            Giver: pair.giver.name,
-            'Giver Email': pair.giver.email,
-            Receiver: pair.receiver.name
-        })));
-        document.getElementById('adminMessage').innerHTML = showMessage('Preview only — emails were not sent. Check the console for the full assignment list.', 'info');
+        document.getElementById('adminMessage').innerHTML = showMessage('Emails were not sent. You can click SEND EMAILS whenever you\'re ready.', 'info');
         return;
     }
 
-    await sendEmails(assignments);
+    await sendEmails(state.pendingAssignments);
+    const messageContent = document.getElementById('adminMessage')?.innerHTML || '';
+    state.pendingAssignments = null;
+    render();
+    const messageContainer = document.getElementById('adminMessage');
+    if (messageContainer && messageContent) {
+        messageContainer.innerHTML = messageContent;
+    }
 }
 
 async function clearAllParticipants() {
@@ -705,13 +735,24 @@ function render() {
                 </div>
             </div>
 
-            <button onclick="runSecretSanta()">
-                📧 RUN SECRET SANTA
-            </button>
-
-            <p class="warning-text">
-                ⚠️ ONCE YOU CLICK, ASSIGNMENTS WILL BE<br>MADE AND EMAILS SENT IMMEDIATELY.<br>YOU WON'T SEE WHO GOT WHOM!
-            </p>
+            <div class="section-box green">
+                <h3>SECRET SANTA DRAW</h3>
+                <p class="helper-text" style="margin-bottom: 15px;">STEP 1: GENERATE A PREVIEW • STEP 2: SEND EMAILS</p>
+                <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:12px;">
+                    <button type="button" class="button-primary" onclick="runSecretSanta()">🎲 GENERATE PREVIEW</button>
+                    <button type="button" class="button-secondary" onclick="sendPendingAssignments()" ${state.pendingAssignments && state.pendingAssignments.length ? '' : 'disabled'}>📧 SEND EMAILS</button>
+                </div>
+                ${state.pendingAssignments && state.pendingAssignments.length ? `
+                    <div class="preview-box">
+                        <p class="helper-text" style="margin-bottom:10px;">Preview ready! Emails won't send until you click SEND EMAILS.</p>
+                        <ul class="preview-list">
+                            ${state.pendingAssignments.map(pair => `<li>${escapeHtml(pair.giver.name)} → ${escapeHtml(pair.receiver.name)}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : `
+                    <p class="helper-text" style="text-align:center;">Click GENERATE PREVIEW to see this year's matches before emailing.</p>
+                `}
+            </div>
         `;
     }
 
@@ -784,6 +825,7 @@ export {
     handleAdminLogout,
     updateConfig,
     runSecretSanta,
+    sendPendingAssignments,
     clearAllParticipants,
     scrollToSignup
 };
