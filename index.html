@@ -543,7 +543,7 @@
     </style>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, initializeFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyD_w3zUhizJZsjdtrzTkq_lAePsvAFVM_o",
@@ -556,6 +556,7 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });
         const db = getFirestore(app);
         window.db = db;
         window.firestoreModules = { collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc };
@@ -866,14 +867,22 @@
                     ].filter(item => item.title || item.link),
                     timestamp: Date.now()
                 });
+            } catch (error) {
+                console.error('Signup error (saving participant):', error);
+                document.getElementById('signupMessage').innerHTML = showMessage('We couldn\'t save your info. Check your connection and try again.', 'error');
+                return;
+            }
+
+            try {
                 form.reset();
                 toggleQuickPicks(false);
                 updateProgressBar();
                 updateCountdown();
                 document.getElementById('signupMessage').innerHTML = showMessage('🎉 Successfully signed up! You\'ll receive an email once Secret Santa assignments are made.', 'success');
                 triggerCelebration();
-            } catch (error) {
-                document.getElementById('signupMessage').innerHTML = showMessage('Error signing up. Please try again.', 'error');
+            } catch (uiError) {
+                console.error('Signup UI update error:', uiError);
+                document.getElementById('signupMessage').innerHTML = showMessage('You\'re signed up, but we hit a snag updating the page. Refresh to double-check your info.', 'info');
             }
         }
 
