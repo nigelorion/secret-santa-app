@@ -5,7 +5,276 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secret Santa Organizer</title>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background: linear-gradient(180deg, #1a3a2e 0%, #2d5f4d 50%, #1a3a2e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Pixel rain effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            background: #0a1f1a;
+            border: 4px solid #4a9d7f;
+            box-shadow: 
+                0 0 0 2px #0a1f1a,
+                0 0 0 6px #2d5f4d,
+                8px 8px 0 0 rgba(0,0,0,0.3);
+            padding: 30px;
+            margin-bottom: 20px;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #0f2a20;
+            border: 3px solid #5fb89d;
+        }
+
+        .header h1 {
+            color: #8fedd4;
+            font-size: 24px;
+            line-height: 1.6;
+            text-shadow: 3px 3px 0 #1a3a2e;
+            margin-bottom: 10px;
+        }
+
+        .pixel-icon {
+            font-size: 48px;
+            display: inline-block;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #2d5f4d;
+            padding-bottom: 10px;
+        }
+
+        .tab-button {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            padding: 15px 20px;
+            background: #1a3a2e;
+            color: #8fedd4;
+            border: 3px solid #4a9d7f;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+
+        .tab-button:hover {
+            background: #2d5f4d;
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 0 rgba(0,0,0,0.3);
+        }
+
+        .tab-button.active {
+            background: #4a9d7f;
+            color: #0a1f1a;
+            border-color: #8fedd4;
+        }
+
+        h2 {
+            color: #8fedd4;
+            font-size: 18px;
+            margin-bottom: 25px;
+            text-shadow: 2px 2px 0 #1a3a2e;
+        }
+
+        h3 {
+            color: #5fb89d;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            color: #8fedd4;
+            font-size: 10px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background: #0a1f1a;
+            border: 3px solid #2d5f4d;
+            color: #8fedd4;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4a9d7f;
+            box-shadow: 0 0 0 3px rgba(143, 237, 212, 0.2);
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: #2d5f4d;
+        }
+
+        button {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            padding: 15px 30px;
+            background: #4a9d7f;
+            color: #0a1f1a;
+            border: 3px solid #8fedd4;
+            cursor: pointer;
+            transition: all 0.1s;
+            width: 100%;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #5fb89d;
+            transform: translate(-3px, -3px);
+            box-shadow: 5px 5px 0 0 rgba(0,0,0,0.4);
+        }
+
+        button:active {
+            transform: translate(0, 0);
+            box-shadow: 2px 2px 0 0 rgba(0,0,0,0.4);
+        }
+
+        .message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 3px solid;
+            font-size: 10px;
+            line-height: 1.6;
+        }
+
+        .message.success {
+            background: rgba(143, 237, 212, 0.1);
+            border-color: #4a9d7f;
+            color: #8fedd4;
+        }
+
+        .message.error {
+            background: rgba(237, 143, 143, 0.1);
+            border-color: #c74a4a;
+            color: #ed8f8f;
+        }
+
+        .message.info {
+            background: rgba(143, 189, 237, 0.1);
+            border-color: #4a7f9d;
+            color: #8fbded;
+        }
+
+        .participant-card {
+            background: #0f2a20;
+            border: 2px solid #2d5f4d;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .participant-card p {
+            font-size: 10px;
+            color: #8fedd4;
+            margin-bottom: 5px;
+        }
+
+        .section-box {
+            background: rgba(15, 42, 32, 0.5);
+            border: 3px solid;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section-box.yellow {
+            border-color: #9d9d4a;
+        }
+
+        .section-box.blue {
+            border-color: #4a7f9d;
+        }
+
+        .helper-text {
+            font-size: 8px;
+            color: #5fb89d;
+            line-height: 1.4;
+            margin-top: 5px;
+        }
+
+        .warning-text {
+            font-size: 9px;
+            color: #9d9d4a;
+            text-align: center;
+            margin-top: 15px;
+            line-height: 1.5;
+        }
+
+        /* Pixel trees decoration */
+        .trees {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 50px,
+                rgba(74, 157, 127, 0.1) 50px,
+                rgba(74, 157, 127, 0.1) 60px
+            );
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -30,20 +299,21 @@
         });
     </script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-6">
-    <div id="app" class="max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg shadow-xl p-8">
-            <div class="flex items-center justify-center mb-8">
-                <span class="text-5xl mr-3">🎁</span>
-                <h1 class="text-4xl font-bold text-gray-800">Secret Santa Organizer</h1>
-            </div>
+<body>
+    <div class="trees"></div>
+    <div class="container">
+        <div class="header">
+            <div class="pixel-icon">🎄</div>
+            <h1>SECRET SANTA<br>ORGANIZER</h1>
+        </div>
 
-            <div class="flex gap-2 mb-6 border-b">
-                <button onclick="showView('signup')" id="signupTab" class="px-4 py-2 font-medium text-red-600 border-b-2 border-red-600">
-                    👥 Sign Up
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-button active" onclick="showView('signup')" id="signupTab">
+                    SIGN UP
                 </button>
-                <button onclick="showView('admin-login')" id="adminTab" class="px-4 py-2 font-medium text-gray-600">
-                    ⚙️ Admin
+                <button class="tab-button" onclick="showView('admin-login')" id="adminTab">
+                    ADMIN
                 </button>
             </div>
 
@@ -108,18 +378,18 @@
         }
 
         function showMessage(message, type) {
-            const colors = {
-                success: 'bg-green-50 border-green-200 text-green-800',
-                error: 'bg-red-50 border-red-200 text-red-800',
-                info: 'bg-blue-50 border-blue-200 text-blue-800'
-            };
-            return `<div class="mb-4 p-4 rounded-lg border ${colors[type]}">${message}</div>`;
+            const typeClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            return `<div class="message ${typeClass}">${message}</div>`;
         }
 
         function showView(view) {
             state.view = view;
-            document.getElementById('signupTab').className = view === 'signup' ? 'px-4 py-2 font-medium text-red-600 border-b-2 border-red-600' : 'px-4 py-2 font-medium text-gray-600';
-            document.getElementById('adminTab').className = (view === 'admin' || view === 'admin-login') ? 'px-4 py-2 font-medium text-red-600 border-b-2 border-red-600' : 'px-4 py-2 font-medium text-gray-600';
+            const signupTab = document.getElementById('signupTab');
+            const adminTab = document.getElementById('adminTab');
+            
+            signupTab.className = view === 'signup' ? 'tab-button active' : 'tab-button';
+            adminTab.className = (view === 'admin' || view === 'admin-login') ? 'tab-button active' : 'tab-button';
+            
             render();
         }
 
@@ -289,94 +559,97 @@
             
             if (state.view === 'signup') {
                 content.innerHTML = `
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Join Secret Santa</h2>
+                    <h2>JOIN SECRET SANTA</h2>
                     <div id="signupMessage"></div>
-                    <form onsubmit="handleSignup(event); return false;" class="space-y-4">
+                    <form onsubmit="handleSignup(event); return false;">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Your Name *</label>
-                            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="John Doe">
+                            <label>YOUR NAME *</label>
+                            <input type="text" name="name" required placeholder="ENTER NAME">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Your Email *</label>
-                            <input type="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="john@example.com">
+                            <label>YOUR EMAIL *</label>
+                            <input type="email" name="email" required placeholder="ENTER EMAIL">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Your Wish List</label>
-                            <textarea name="wishlist" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="List some gift ideas..."></textarea>
+                            <label>YOUR WISH LIST</label>
+                            <textarea name="wishlist" rows="4" placeholder="LIST GIFT IDEAS..."></textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Spouse Name *</label>
-                            <input type="text" name="spouseName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="Enter your spouse's name">
-                            <p class="text-sm text-gray-500 mt-1">You won't be matched with your spouse</p>
+                            <label>SPOUSE NAME *</label>
+                            <input type="text" name="spouseName" required placeholder="ENTER SPOUSE NAME">
+                            <p class="helper-text">YOU WON'T BE MATCHED WITH YOUR SPOUSE</p>
                         </div>
-                        <button type="submit" class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors">
-                            Sign Me Up! 🎅
-                        </button>
+                        <button type="submit">SIGN ME UP! 🎅</button>
                     </form>
                 `;
             } else if (state.view === 'admin-login' && !state.isAdminAuthenticated) {
                 content.innerHTML = `
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Admin Login</h2>
-                    <form onsubmit="handleAdminLogin(event); return false;" class="space-y-4">
-                        <p class="text-gray-600">${!state.adminPassword ? 'First time setup: Create your admin password' : 'Enter admin password to continue'}</p>
-                        <input type="password" id="passwordInput" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="${!state.adminPassword ? 'Create admin password' : 'Enter admin password'}">
-                        <button type="submit" class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">
-                            ${!state.adminPassword ? 'Set Password & Continue' : 'Login'}
+                    <h2>ADMIN LOGIN</h2>
+                    <form onsubmit="handleAdminLogin(event); return false;">
+                        <p class="helper-text" style="margin-bottom: 20px;">${!state.adminPassword ? 'FIRST TIME SETUP: CREATE YOUR ADMIN PASSWORD' : 'ENTER ADMIN PASSWORD TO CONTINUE'}</p>
+                        <input type="password" id="passwordInput" required placeholder="${!state.adminPassword ? 'CREATE PASSWORD' : 'ENTER PASSWORD'}">
+                        <button type="submit">
+                            ${!state.adminPassword ? 'SET PASSWORD' : 'LOGIN'}
                         </button>
                     </form>
                 `;
             } else if (state.view === 'admin' || (state.view === 'admin-login' && state.isAdminAuthenticated)) {
                 state.view = 'admin';
                 const participantsList = state.participants.length === 0 
-                    ? '<p class="text-gray-500">No participants yet</p>'
+                    ? '<p class="helper-text">NO PARTICIPANTS YET</p>'
                     : state.participants.map(p => `
-                        <div class="bg-gray-50 p-3 rounded">
-                            <p class="font-medium">${p.name}</p>
-                            <p class="text-sm text-gray-600">${p.email}</p>
-                            ${p.spouseName ? `<p class="text-sm text-gray-500">Spouse: ${p.spouseName}</p>` : ''}
+                        <div class="participant-card">
+                            <p><strong>${p.name}</strong></p>
+                            <p>${p.email}</p>
+                            ${p.spouseName ? `<p>SPOUSE: ${p.spouseName}</p>` : ''}
                         </div>
                     `).join('');
 
                 content.innerHTML = `
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Admin Panel</h2>
+                    <h2>ADMIN PANEL</h2>
                     <div id="adminMessage"></div>
                     
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold mb-2">Participants (${state.participants.length})</h3>
-                        <div class="space-y-2">${participantsList}</div>
+                    <div style="margin-bottom: 30px;">
+                        <h3>PARTICIPANTS (${state.participants.length})</h3>
+                        ${participantsList}
                     </div>
 
-                    <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <h3 class="text-lg font-semibold mb-2">Historical Pairings</h3>
-                        <p class="text-sm text-gray-600 mb-3">Enter previous years' assignments to avoid repeats (format: "Giver → Receiver" or "Giver - Receiver", comma or newline separated)</p>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">2023 Pairings</label>
-                                <textarea onchange="updateConfig('historicalPairings.year1', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" rows="2" placeholder="John → Sarah, Mary → Tom">${state.config.historicalPairings.year1 || ''}</textarea>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">2024 Pairings</label>
-                                <textarea onchange="updateConfig('historicalPairings.year2', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" rows="2" placeholder="John → Mary, Sarah → John">${state.config.historicalPairings.year2 || ''}</textarea>
-                            </div>
+                    <div class="section-box yellow">
+                        <h3>HISTORICAL PAIRINGS</h3>
+                        <p class="helper-text" style="margin-bottom: 15px;">ENTER PREVIOUS YEARS' ASSIGNMENTS TO AVOID REPEATS<br>FORMAT: "GIVER → RECEIVER" OR "GIVER - RECEIVER"</p>
+                        <div>
+                            <label>2023 PAIRINGS</label>
+                            <textarea onchange="updateConfig('historicalPairings.year1', this.value)" rows="2" placeholder="JOHN → SARAH, MARY → TOM">${state.config.historicalPairings.year1 || ''}</textarea>
+                        </div>
+                        <div>
+                            <label>2024 PAIRINGS</label>
+                            <textarea onchange="updateConfig('historicalPairings.year2', this.value)" rows="2" placeholder="JOHN → MARY, SARAH → JOHN">${state.config.historicalPairings.year2 || ''}</textarea>
                         </div>
                     </div>
 
-                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h3 class="text-lg font-semibold mb-2">EmailJS Configuration</h3>
-                        <p class="text-sm text-gray-600 mb-3">Enter your EmailJS credentials</p>
-                        <div class="space-y-3">
-                            <input type="text" value="${state.config.emailConfig.serviceId || ''}" onchange="updateConfig('serviceId', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Service ID">
-                            <input type="text" value="${state.config.emailConfig.templateId || ''}" onchange="updateConfig('templateId', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Template ID">
-                            <input type="text" value="${state.config.emailConfig.publicKey || ''}" onchange="updateConfig('publicKey', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Public Key">
+                    <div class="section-box blue">
+                        <h3>EMAILJS CONFIGURATION</h3>
+                        <p class="helper-text" style="margin-bottom: 15px;">ENTER YOUR EMAILJS CREDENTIALS</p>
+                        <div>
+                            <label>SERVICE ID</label>
+                            <input type="text" value="${state.config.emailConfig.serviceId || ''}" onchange="updateConfig('serviceId', this.value)" placeholder="SERVICE_ID">
+                        </div>
+                        <div>
+                            <label>TEMPLATE ID</label>
+                            <input type="text" value="${state.config.emailConfig.templateId || ''}" onchange="updateConfig('templateId', this.value)" placeholder="TEMPLATE_ID">
+                        </div>
+                        <div>
+                            <label>PUBLIC KEY</label>
+                            <input type="text" value="${state.config.emailConfig.publicKey || ''}" onchange="updateConfig('publicKey', this.value)" placeholder="PUBLIC_KEY">
                         </div>
                     </div>
 
-                    <button onclick="runSecretSanta()" class="w-full bg-green-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors flex items-center justify-center">
-                        📧 Run Secret Santa & Send Emails
+                    <button onclick="runSecretSanta()">
+                        📧 RUN SECRET SANTA
                     </button>
                     
-                    <p class="text-sm text-gray-500 mt-2 text-center">
-                        ⚠️ Once you click this, assignments will be made and emails sent immediately. You won't see who got whom!
+                    <p class="warning-text">
+                        ⚠️ ONCE YOU CLICK, ASSIGNMENTS WILL BE<br>MADE AND EMAILS SENT IMMEDIATELY.<br>YOU WON'T SEE WHO GOT WHOM!
                     </p>
                 `;
             }
