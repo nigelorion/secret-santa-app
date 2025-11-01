@@ -245,6 +245,85 @@
             color: #fcefd7;
         }
 
+        .intro-text {
+            color: #f5d67b;
+            font-size: 16px;
+            margin-bottom: 22px;
+            line-height: 1.7;
+            text-align: center;
+        }
+
+        .progress-bar {
+            margin: 0 auto 22px;
+            width: 100%;
+            max-width: 420px;
+            background: rgba(15, 36, 28, 0.6);
+            border: 2px solid rgba(245, 214, 123, 0.4);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+            height: 22px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.35);
+        }
+
+        .progress-bar span {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fcefd7;
+            line-height: 22px;
+            letter-spacing: 0.05em;
+            z-index: 1;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, rgba(217, 91, 91, 0.9), rgba(148, 35, 35, 0.9));
+            transition: width 0.4s ease;
+        }
+
+        .countdown-box {
+            margin: 0 auto 26px;
+            padding: 14px 18px;
+            max-width: 420px;
+            background: rgba(15, 36, 28, 0.65);
+            border: 2px solid rgba(245, 214, 123, 0.4);
+            border-radius: 12px;
+            text-align: center;
+            color: #f5d67b;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            box-shadow: 0 10px 22px rgba(0,0,0,0.25);
+        }
+
+        .progress-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-bottom: 22px;
+            align-items: center;
+        }
+
+        .progress-grid .progress-text {
+            color: #fcefd7;
+            font-size: 14px;
+            letter-spacing: 0.05em;
+            text-align: center;
+        }
+
+        @media (min-width: 640px) {
+            .progress-grid {
+                grid-template-columns: 2fr 1fr;
+                gap: 16px;
+            }
+
+            .progress-grid .progress-text {
+                text-align: left;
+            }
+        }
+
         .participant-card {
             background: rgba(15, 36, 28, 0.75);
             border: 1px solid rgba(245, 214, 123, 0.25);
@@ -281,6 +360,79 @@
             color: #ccecff;
         }
 
+        .toggle-quick-picks {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin: 6px 0 16px;
+            padding: 12px 18px;
+            background: rgba(245, 214, 123, 0.18);
+            color: #fcefd7;
+            border: 2px dashed rgba(245, 214, 123, 0.45);
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 0.05em;
+            transition: all 0.15s ease;
+        }
+
+        .toggle-quick-picks:hover {
+            background: rgba(245, 214, 123, 0.28);
+            transform: translateY(-2px);
+        }
+
+        .toggle-quick-picks.active {
+            background: rgba(217, 91, 91, 0.25);
+            border-style: solid;
+        }
+
+        .celebration-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .celebration-overlay.active {
+            opacity: 1;
+        }
+
+        .celebration-overlay.fade {
+            opacity: 0;
+        }
+
+        .celebration-overlay .flake {
+            font-size: 28px;
+            margin: 8px;
+            opacity: 0;
+            animation: floatDown 4.5s ease-in infinite;
+        }
+
+        .celebration-overlay .flake:nth-child(odd) {
+            animation-delay: 0.3s;
+        }
+
+        .celebration-overlay .flake:nth-child(even) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes floatDown {
+            0% { transform: translateY(-20vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            50% { transform: translateY(40vh) rotate(180deg); }
+            100% { transform: translateY(90vh) rotate(360deg); opacity: 0; }
+        }
+
         .section-box {
             background: rgba(15, 36, 28, 0.7);
             border: 2px solid rgba(245, 214, 123, 0.35);
@@ -296,6 +448,16 @@
 
         .section-box.blue {
             border-color: rgba(242, 159, 107, 0.45);
+        }
+
+        .section-box.quick-picks {
+            display: none;
+            padding: 18px;
+            margin-bottom: 18px;
+        }
+
+        .section-box.quick-picks.open {
+            display: block;
         }
 
         .helper-text {
@@ -410,6 +572,33 @@
 
         document.addEventListener('focusin', handleFocusScroll);
 
+        function triggerCelebration() {
+            const overlay = document.createElement('div');
+            overlay.className = 'celebration-overlay';
+            const icons = ['🎄', '❄️', '🎁', '✨', '🕯️', '🦌', '🍪', '☃️'];
+            overlay.innerHTML = Array.from({ length: 24 }).map(() => {
+                const icon = icons[Math.floor(Math.random() * icons.length)];
+                return `<div class="flake">${icon}</div>`;
+            }).join('');
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('active'));
+            setTimeout(() => overlay.classList.add('fade'), 4200);
+            setTimeout(() => overlay.remove(), 5200);
+        }
+
+        function getDaysUntilChristmas() {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const christmas = new Date(currentYear, 11, 25);
+            if (now > christmas) {
+                christmas.setFullYear(currentYear + 1);
+            }
+            const diff = christmas - now;
+            return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+        }
+
+        window.getDaysUntilChristmas = getDaysUntilChristmas;
+
         window.addEventListener('load', () => {
             if (window.initApp) window.initApp();
         });
@@ -420,7 +609,7 @@
     <div class="container">
         <div class="header">
             <div class="pixel-icon">🎄</div>
-            <h1>SECRET SANTA<br>ORGANIZER</h1>
+            <h1>THE SECRET SANTA MACHINE</h1>
         </div>
 
         <div class="card">
@@ -438,6 +627,19 @@
     </div>
 
     <script>
+        const TOTAL_PARTICIPANTS_TARGET = 10;
+
+        function getDaysUntilChristmasLocal() {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const christmas = new Date(currentYear, 11, 25);
+            if (now > christmas) {
+                christmas.setFullYear(currentYear + 1);
+            }
+            const diff = christmas - now;
+            return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+        }
+
         let state = {
             view: 'signup',
             isAdminAuthenticated: false,
@@ -510,6 +712,8 @@
                     localStorage.removeItem('adminSession');
                 }
                 localStorage.removeItem('adminPassword');
+                updateProgressBar();
+                updateCountdown();
             } catch (error) {
                 console.error('Error loading from Firebase:', error);
             }
@@ -552,19 +756,97 @@
             render();
         }
 
+        function toggleQuickPicks(forceOpen) {
+            const section = document.getElementById('quickPicksSection');
+            const toggleButton = document.getElementById('quickPicksToggle');
+            if (!section || !toggleButton) return;
+            const shouldOpen = typeof forceOpen === 'boolean'
+                ? forceOpen
+                : !section.classList.contains('open');
+            section.classList.toggle('open', shouldOpen);
+            toggleButton.classList.toggle('active', shouldOpen);
+            toggleButton.textContent = shouldOpen ? '− Hide quick picks' : '➕ Add quick picks (optional)';
+            const inputs = section.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.disabled = !shouldOpen;
+            });
+        }
+
+        function updateProgressBar() {
+            const total = TOTAL_PARTICIPANTS_TARGET || 1;
+            const signed = state.participants.length;
+            const percentBase = total ? Math.min(signed, total) : signed;
+            const percent = Math.min(100, total ? (percentBase / total) * 100 : 100);
+            const remaining = Math.max(0, total - signed);
+            const primaryLabel = remaining > 0
+                ? `${signed}/${total} signed up • ${remaining} to go`
+                : `${signed}/${total} signed up • Everyone's in!`;
+
+            const fill = document.getElementById('progressFill');
+            const label = document.getElementById('progressLabel');
+            const text = document.getElementById('progressText');
+            if (fill) fill.style.width = `${percent}%`;
+            if (label) label.textContent = primaryLabel;
+            if (text) text.textContent = `${signed} of ${total} have already shared their wish lists`;
+
+            const adminFill = document.getElementById('adminProgressFill');
+            const adminLabel = document.getElementById('adminProgressLabel');
+            const adminText = document.getElementById('adminProgressText');
+            if (adminFill) adminFill.style.width = `${percent}%`;
+            if (adminLabel) {
+                const adminTextContent = remaining > 0
+                    ? `${signed}/${total} signed up (${remaining} left)`
+                    : `${signed}/${total} signed up (All set)`;
+                adminLabel.textContent = adminTextContent;
+            }
+            if (adminText) {
+                adminText.textContent = `${signed} of ${total} have submitted their wish lists`;
+            }
+        }
+
+        function updateCountdown() {
+            const days = getDaysUntilChristmasLocal();
+            state.daysUntilChristmas = days;
+            let message = '🎄 Christmas is here!';
+            if (days > 1) {
+                message = `🎅 ${days} days until Christmas`;
+            } else if (days === 1) {
+                message = '🎅 1 day until Christmas';
+            } else if (days === 0) {
+                message = '🎄 It\'s Christmas Day!';
+            }
+
+            const countdownBox = document.getElementById('countdownBox');
+            if (countdownBox) countdownBox.textContent = message;
+
+            const adminCountdown = document.getElementById('adminCountdown');
+            if (adminCountdown) adminCountdown.textContent = message;
+        }
+
         async function handleSignup(event) {
             event.preventDefault();
-            const formData = new FormData(event.target);
-            const name = formData.get('name');
-            const email = formData.get('email');
-            const wishlist = formData.get('wishlist');
-            const spouseName = formData.get('spouseName');
-            const quickPick1 = formData.get('quickPick1');
-            const quickPick2 = formData.get('quickPick2');
-            const quickPick3 = formData.get('quickPick3');
-            const quickPick1Link = formData.get('quickPick1Link');
-            const quickPick2Link = formData.get('quickPick2Link');
-            const quickPick3Link = formData.get('quickPick3Link');
+            const form = event.target;
+            const formData = new FormData(form);
+            const name = (formData.get('name') || '').trim();
+            const email = (formData.get('email') || '').trim();
+            const wishlist = (formData.get('wishlist') || '').trim();
+            const spouseName = (formData.get('spouseName') || '').trim();
+            const quickPick1 = (formData.get('quickPick1') || '').trim();
+            const quickPick2 = (formData.get('quickPick2') || '').trim();
+            const quickPick3 = (formData.get('quickPick3') || '').trim();
+            const quickPick1Link = (formData.get('quickPick1Link') || '').trim();
+            const quickPick2Link = (formData.get('quickPick2Link') || '').trim();
+            const quickPick3Link = (formData.get('quickPick3Link') || '').trim();
+
+            const requiredMissing = [];
+            if (!name) requiredMissing.push('your name');
+            if (!email) requiredMissing.push('your email');
+            if (!spouseName) requiredMissing.push('your spouse\'s name');
+
+            if (requiredMissing.length) {
+                document.getElementById('signupMessage').innerHTML = showMessage(`Please fill out ${requiredMissing.join(', ')} before signing up.`, 'error');
+                return;
+            }
 
             if (state.participants.some(p => p.email.toLowerCase() === email.toLowerCase() || p.name.toLowerCase() === name.toLowerCase())) {
                 document.getElementById('signupMessage').innerHTML = showMessage('Oops! You are already signed up this year. If you need to update your info, contact the organizer.', 'error');
@@ -584,9 +866,12 @@
                     ].filter(item => item.title || item.link),
                     timestamp: Date.now()
                 });
-                event.target.reset();
+                form.reset();
+                toggleQuickPicks(false);
+                updateProgressBar();
+                updateCountdown();
                 document.getElementById('signupMessage').innerHTML = showMessage('🎉 Successfully signed up! You\'ll receive an email once Secret Santa assignments are made.', 'success');
-                setTimeout(() => { document.getElementById('signupMessage').innerHTML = ''; }, 5000);
+                triggerCelebration();
             } catch (error) {
                 document.getElementById('signupMessage').innerHTML = showMessage('Error signing up. Please try again.', 'error');
             }
@@ -757,6 +1042,12 @@
                 
                 let successCount = 0;
                 let failCount = 0;
+                const daysUntilChristmas = getDaysUntilChristmasLocal();
+                const countdownLine = daysUntilChristmas > 1
+                    ? `${daysUntilChristmas} days until Christmas`
+                    : daysUntilChristmas === 1
+                        ? '1 day until Christmas'
+                        : 'Christmas is here!';
                 
                 for (const assignment of assignments) {
                     try {
@@ -779,7 +1070,8 @@
                                 to_email: assignment.giver.email,
                                 receiver_name: assignment.receiver.name,
                                 receiver_wishlist: assignment.receiver.wishlist || 'No wish list provided yet',
-                                receiver_quick_picks: quickPicks || 'Surprise them—no quick picks added!'
+                                receiver_quick_picks: quickPicks || 'Surprise them—no quick picks added!',
+                                countdown_to_christmas: countdownLine
                             }
                         );
                         successCount++;
@@ -820,49 +1112,66 @@
             
             if (state.view === 'signup') {
                 content.innerHTML = `
-                    <h2>JOIN SECRET SANTA</h2>
+                    <div id="signupFormTop"></div>
+                    <div class="countdown-box" id="countdownBox">Loading countdown...</div>
+                    <div class="progress-grid">
+                        <div class="progress-bar" id="progressBar">
+                            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                            <span id="progressLabel"></span>
+                        </div>
+                        <p class="progress-text" id="progressText"></p>
+                    </div>
+                    <p class="intro-text">Fill this out once and we’ll take care of the rest—share who you are, what you love, and we’ll handle the match-up magic.</p>
                     <div id="signupMessage"></div>
-                    <form onsubmit="handleSignup(event); return false;">
+                    <form id="signupForm" onsubmit="handleSignup(event); return false;">
                         <div>
                             <label>YOUR NAME *</label>
-                            <input type="text" name="name" required placeholder="ENTER NAME">
+                            <input type="text" name="name" placeholder="ENTER NAME">
                         </div>
                         <div>
                             <label>YOUR EMAIL *</label>
-                            <input type="email" name="email" required placeholder="ENTER EMAIL">
+                            <input type="email" name="email" placeholder="ENTER EMAIL">
                         </div>
                         <div>
                             <label>WISH LIST LETTER</label>
                             <textarea name="wishlist" rows="5" placeholder="Say hi to your Santa, share what you\'re into this season, and mention any themes or surprises you\'d love."></textarea>
                         </div>
-                        <div class="section-box" style="padding:18px; margin-bottom:18px;">
-                            <h3 style="margin-bottom:12px; color:#f5d67b;">QUICK PICKS (OPTIONAL)</h3>
+                        <button type="button" class="toggle-quick-picks" id="quickPicksToggle" onclick="toggleQuickPicks()">➕ Add quick picks (optional)</button>
+                        <div class="section-box quick-picks" id="quickPicksSection">
+                            <h3 style="margin-bottom:12px; color:#f5d67b;">QUICK PICKS</h3>
                             <p class="helper-text" style="margin-bottom:10px;">Add up to three specific ideas or product links in case your Santa needs a nudge.</p>
                             <div style="display:grid; gap:12px;">
                                 <div style="display:grid; gap:8px;">
                                     <label style="margin-bottom:0;">ITEM 1 TITLE</label>
-                                    <input type="text" name="quickPick1" placeholder="Example: Cozy flannel pajamas">
-                                    <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set">
+                                    <input type="text" name="quickPick1" placeholder="Example: Cozy flannel pajamas" disabled>
+                                    <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set" disabled>
                                 </div>
                                 <div style="display:grid; gap:8px;">
                                     <label style="margin-bottom:0;">ITEM 2 TITLE</label>
-                                    <input type="text" name="quickPick2" placeholder="Example: Cookbook from my wish list">
-                                    <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook">
+                                    <input type="text" name="quickPick2" placeholder="Example: Cookbook from my wish list" disabled>
+                                    <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook" disabled>
                                 </div>
                                 <div style="display:grid; gap:8px;">
                                     <label style="margin-bottom:0;">ITEM 3 TITLE</label>
-                                    <input type="text" name="quickPick3" placeholder="Example: Local coffee shop gift card">
-                                    <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card">
+                                    <input type="text" name="quickPick3" placeholder="Example: Local coffee shop gift card" disabled>
+                                    <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card" disabled>
                                 </div>
                             </div>
                         </div>
                         <div>
                             <label>SPOUSE NAME *</label>
-                            <input type="text" name="spouseName" required placeholder="Enter spouse's name so you aren't matched together">
+                            <input type="text" name="spouseName" placeholder="Spouse's name (no matching together)">
                         </div>
                         <button type="submit">SIGN ME UP! 🎅</button>
                     </form>
                 `;
+                toggleQuickPicks(false);
+                setTimeout(() => {
+                    const target = document.getElementById('signupFormTop');
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 150);
             } else if (state.view === 'admin-login' && !state.isAdminAuthenticated) {
                 const hasPassword = Boolean(state.config.admin.passwordHash);
                 content.innerHTML = `
@@ -908,6 +1217,14 @@
 
                 content.innerHTML = `
                     <h2>ADMIN PANEL</h2>
+                    <div class="countdown-box" id="adminCountdown">Loading countdown...</div>
+                    <div class="progress-grid">
+                        <div class="progress-bar" id="adminProgressBar">
+                            <div class="progress-fill" id="adminProgressFill" style="width:0%"></div>
+                            <span id="adminProgressLabel"></span>
+                        </div>
+                        <p class="progress-text" id="adminProgressText"></p>
+                    </div>
                     <div id="adminMessage"></div>
                     
                     <div style="margin-bottom: 30px;">
@@ -974,6 +1291,8 @@
                     </p>
                 `;
             }
+            updateProgressBar();
+            updateCountdown();
         }
     </script>
 </body>
