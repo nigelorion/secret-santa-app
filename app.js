@@ -169,8 +169,16 @@ function showView(view) {
     const signupTab = document.getElementById('signupTab');
     const adminTab = document.getElementById('adminTab');
 
-    if (signupTab) signupTab.className = view === 'signup' ? 'tab-button active' : 'tab-button';
-    if (adminTab) adminTab.className = (view === 'admin' || view === 'admin-login') ? 'tab-button active' : 'tab-button';
+    if (signupTab) {
+        signupTab.classList.toggle('active', view === 'signup');
+    }
+    if (adminTab) {
+        if (adminTab.classList.contains('tab-button')) {
+            adminTab.classList.toggle('active', view === 'admin' || view === 'admin-login');
+        } else {
+            adminTab.classList.toggle('admin-entry-active', view === 'admin' || view === 'admin-login');
+        }
+    }
 
     render();
 }
@@ -814,6 +822,18 @@ window.runSecretSanta = runSecretSanta;
 window.clearAllParticipants = clearAllParticipants;
 window.scrollToSignup = scrollToSignup;
 
+function setupStaticListeners() {
+    const signupButton = document.getElementById('signupButton');
+    if (signupButton) {
+        signupButton.addEventListener('click', scrollToSignup);
+    }
+    const adminButton = document.getElementById('adminTab');
+    if (adminButton) {
+        adminButton.addEventListener('click', () => showView('admin-login'));
+    }
+}
+
 window.addEventListener('load', () => {
     if (window.initApp) window.initApp();
+    setupStaticListeners();
 });
