@@ -29,10 +29,7 @@ const db = initializeFirestore(app, {
     useFetchStreams: false
 });
 
-const firestoreModules = { collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc };
-
 window.db = db;
-window.firestoreModules = firestoreModules;
 
 function handleFocusScroll(event) {
     const target = event.target;
@@ -166,15 +163,9 @@ function showMessage(message, type) {
 function showView(view) {
     state.view = view;
     const adminTab = document.getElementById('adminTab');
-
     if (adminTab) {
-        if (adminTab.classList.contains('tab-button')) {
-            adminTab.classList.toggle('active', view === 'admin' || view === 'admin-login');
-        } else {
-            adminTab.classList.toggle('admin-entry-active', view === 'admin' || view === 'admin-login');
-        }
+        adminTab.classList.toggle('admin-entry-active', view === 'admin' || view === 'admin-login');
     }
-
     render();
 }
 

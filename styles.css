@@ -143,42 +143,6 @@ body::after {
     50% { transform: translateY(-10px); }
 }
 
-.tabs {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 34px;
-    border-bottom: 4px solid rgba(245, 214, 123, 0.35);
-    padding-bottom: 12px;
-}
-
-.tab-button {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    font-size: 13px;
-    padding: 16px 22px;
-    background: rgba(217, 91, 91, 0.2);
-    color: #fcefd7;
-    border: 2px solid rgba(245, 214, 123, 0.5);
-    cursor: pointer;
-    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    border-radius: 6px;
-}
-
-.tab-button:hover {
-    background: rgba(217, 91, 91, 0.45);
-    transform: translate(-2px, -2px);
-    box-shadow: 5px 5px 0 0 rgba(0,0,0,0.28);
-}
-
-.tab-button.active {
-    background: linear-gradient(135deg, rgba(217, 91, 91, 0.9), rgba(148, 35, 35, 0.9));
-    color: #fff9ec;
-    border-color: rgba(245, 214, 123, 0.85);
-    box-shadow: 0 8px 22px rgba(0,0,0,0.25);
-}
-
 h2 {
     color: #f5d67b;
     font-family: 'Press Start 2P', cursive;
