@@ -51,7 +51,7 @@ function triggerCelebration() {
     const flakes = Array.from({ length: 50 }).map(() => {
         const left = Math.random() * 100;
         const duration = 6 + Math.random() * 4;
-        const delay = Math.random() * 1.5;
+        const delay = Math.random() * 0.6;
         const drift = (Math.random() * 40 - 20).toFixed(2) + 'vw';
         const scale = 0.8 + Math.random() * 0.6;
         return `<div class="flake" style="left:${left}vw; animation-duration:${duration}s; animation-delay:${delay}s; --drift:${drift}; transform:scale(${scale});">❄️</div>`;
@@ -251,6 +251,11 @@ async function handleSignup(event) {
     const quickPick2Link = (formData.get('quickPick2Link') || '').trim();
     const quickPick3Link = (formData.get('quickPick3Link') || '').trim();
 
+    if (typeof navigator !== 'undefined' && navigator && 'onLine' in navigator && !navigator.onLine) {
+        document.getElementById('signupMessage').innerHTML = showMessage('Looks like you\'re offline. Reconnect to the internet, then try signing up again.', 'error');
+        return;
+    }
+
     const requiredMissing = [];
     if (!name) requiredMissing.push('your name');
     if (!email) requiredMissing.push('your email');
@@ -291,6 +296,12 @@ async function handleSignup(event) {
         updateProgressBar();
         updateCountdown();
         document.getElementById('signupMessage').innerHTML = showMessage('🎉 Successfully signed up! You\'ll receive an email once Secret Santa assignments are made.', 'success');
+        const topAnchor = document.getElementById('signupFormTop');
+        if (topAnchor) {
+            topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         triggerCelebration();
     } catch (uiError) {
         console.error('Signup UI update error:', uiError);
@@ -528,6 +539,13 @@ async function clearAllParticipants() {
     if (!confirmed) return;
 
     try {
+        if (state.participants.length === 0) {
+            const currentMessage = document.getElementById('adminMessage');
+            if (currentMessage) {
+                currentMessage.innerHTML = showMessage('There aren\'t any sign-ups to clear right now.', 'info');
+            }
+            return;
+        }
         const snapshot = await getDocs(collection(db, 'participants'));
         const deletions = snapshot.docs.map(d => deleteDoc(doc(db, 'participants', d.id)));
         await Promise.all(deletions);
@@ -622,6 +640,12 @@ function render() {
             </form>
         `;
         toggleQuickPicks(false);
+        setTimeout(() => {
+            const topAnchor = document.getElementById('signupFormTop');
+            if (topAnchor) {
+                topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
     } else if (state.view === 'admin-login' && !state.isAdminAuthenticated) {
         const hasPassword = Boolean(state.config.admin.passwordHash);
         content.innerHTML = `
@@ -634,6 +658,7 @@ function render() {
                     LOGIN
                 </button>
             </form>
+            <button type="button" class="button-secondary" onclick="showView('signup')" style="margin-top:16px;width:auto;padding:10px 18px;">⬅ BACK TO SIGN UP</button>
         `;
     } else if (state.isAdminAuthenticated && (state.view === 'admin' || state.view === 'admin-login')) {
         state.view = 'admin';
@@ -675,6 +700,7 @@ function render() {
                 </div>
                 <p class="progress-text" id="adminProgressText"></p>
             </div>
+            <button type="button" class="button-secondary" onclick="showView('signup')" style="margin-bottom:18px;width:auto;padding:10px 18px;">⬅ BACK TO SIGN UP</button>
             <div id="adminMessage"></div>
 
             <div style="margin-bottom: 30px;">

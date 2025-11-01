@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secret Santa Organizer</title>
+    <title>The Secret Santa Machine</title>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,19 +16,13 @@
         <div class="header">
             <div class="pixel-icon">🎄</div>
             <h1>THE SECRET SANTA MACHINE</h1>
+            <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmkwMTI1YzEweWlwOW1leDdkZ2NhY2JkNWRxa2tncXNndjEyMTA0ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/jS5h8xwQtqGOk/giphy.gif" alt="Santa and sleigh flying" class="header-gif" loading="lazy">
+            <div class="cassette-row" aria-hidden="true">📼📼📼📼📼📼📼📼📼📼</div>
         </div>
 
         <div class="card">
-            <div class="tabs">
-                <button class="tab-button active" onclick="showView('signup')" id="signupTab">
-                    SIGN UP
-                </button>
-                <button class="tab-button" onclick="showView('admin-login')" id="adminTab">
-                    ADMIN
-                </button>
-            </div>
-
             <div id="content"></div>
+            <button type="button" class="admin-entry" onclick="showView('admin-login')" id="adminTab">Admin Access</button>
         </div>
     </div>
     <script type="module" src="app.js"></script>
