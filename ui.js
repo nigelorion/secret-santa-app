@@ -386,8 +386,26 @@ async function runSecretSanta() {
         }
 
         if (!failed) {
-            assignments = proposed;
-            break;
+            const pairs = new Map();
+            proposed.forEach(pair => {
+                const giverName = pair.giver?.name?.toLowerCase();
+                const receiverName = pair.receiver?.name?.toLowerCase();
+                if (giverName && receiverName) {
+                    pairs.set(giverName, receiverName);
+                }
+            });
+
+            const hasMutualPairs = proposed.some(pair => {
+                const giverName = pair.giver?.name?.toLowerCase();
+                const receiverName = pair.receiver?.name?.toLowerCase();
+                if (!giverName || !receiverName) return false;
+                return pairs.get(receiverName) === giverName;
+            });
+
+            if (!hasMutualPairs) {
+                assignments = proposed;
+                break;
+            }
         }
     }
 
