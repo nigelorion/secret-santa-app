@@ -397,7 +397,7 @@ async function clearAllParticipants() {
             return;
         }
         await clearAllParticipantsData();
-        await loadFromFirebase();
+        await loadFromFirebase({ fetchParticipants: true });
         render();
         const messageContainer = document.getElementById('adminMessage');
         if (messageContainer) {
@@ -621,6 +621,9 @@ async function initializeUI() {
     document.addEventListener('focusin', handleFocusScroll);
     setupStaticListeners();
 
+    await loadFromFirebase({ fetchParticipants: false });
+    render();
+
     onAuthStateChanged(auth, async (user) => {
         try {
             let claims = {};
@@ -629,6 +632,13 @@ async function initializeUI() {
                 claims = tokenResult.claims;
             }
             setAdminAuth(user, claims);
+
+            if (state.isAdminAuthenticated) {
+                await loadFromFirebase({ fetchParticipants: true });
+            } else {
+                state.participants = [];
+            }
+
             if (state.isAdminAuthenticated && state.view === 'admin-login') {
                 state.view = 'admin';
             }
@@ -640,9 +650,6 @@ async function initializeUI() {
             console.error('Auth state error:', error);
         }
     });
-
-    await loadFromFirebase();
-    render();
 }
 
 export {

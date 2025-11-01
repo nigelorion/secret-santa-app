@@ -23,11 +23,9 @@ const state = {
     }
 };
 
-async function loadFromFirebase() {
+async function loadFromFirebase(options = {}) {
+    const { fetchParticipants = false } = options;
     try {
-        const participantsSnapshot = await getDocs(collection(db, 'participants'));
-        state.participants = participantsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
         const configDoc = await getDoc(doc(db, 'config', 'settings'));
         if (configDoc.exists()) {
             const configData = configDoc.data();
@@ -45,8 +43,23 @@ async function loadFromFirebase() {
             };
         }
     } catch (error) {
-        console.error('Error loading from Firebase:', error);
+        console.error('Error loading config from Firebase:', error);
         throw error;
+    }
+
+    if (fetchParticipants) {
+        state.participants = [];
+        try {
+            const participantsSnapshot = await getDocs(collection(db, 'participants'));
+            state.participants = participantsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch (error) {
+            if (error.code === 'permission-denied') {
+                state.participants = [];
+            } else {
+                console.error('Error loading participants from Firebase:', error);
+                throw error;
+            }
+        }
     }
 
     return state;
