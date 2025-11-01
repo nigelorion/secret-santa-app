@@ -587,6 +587,8 @@
             setTimeout(() => overlay.remove(), 5200);
         }
 
+        window.triggerCelebration = triggerCelebration;
+
         function getDaysUntilChristmas() {
             const now = new Date();
             const currentYear = now.getFullYear();
