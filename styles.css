@@ -7,7 +7,8 @@
 body {
     font-family: 'Montserrat', sans-serif;
     background:
-        linear-gradient(180deg, rgba(18, 52, 40, 0.92), rgba(18, 32, 24, 0.95)),
+        linear-gradient(180deg, rgba(18, 52, 40, 0.72) 0%, rgba(18, 32, 24, 0.88) 65%, rgba(12, 28, 22, 0.95) 100%),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 55%),
         url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
     color: #f6fbf8;
     min-height: 100vh;
@@ -39,7 +40,7 @@ body::after {
     content: '';
     position: fixed;
     inset: 0;
-    background: radial-gradient(circle at top, rgba(255, 235, 200, 0.18) 0%, rgba(10, 25, 20, 0.75) 70%);
+    background: radial-gradient(circle at top, rgba(255, 248, 240, 0.26) 0%, rgba(10, 25, 20, 0.7) 68%);
     pointer-events: none;
     z-index: 0;
 }
@@ -118,7 +119,6 @@ body::after {
 .header-sleigh {
     position: relative;
     width: 100%;
-    max-width: 320px;
     height: 52px;
     margin: 18px auto 0;
     overflow: hidden;
@@ -129,16 +129,18 @@ body::after {
     display: inline-block;
     font-size: 34px;
     white-space: nowrap;
-    transform: translateX(140%);
-    animation: parade-fly 12s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+    transform: translateX(160%);
+    animation: parade-fly 14s linear infinite;
+    animation-fill-mode: forwards;
     will-change: transform;
 }
 
 @keyframes parade-fly {
-    0% { transform: translateX(140%); opacity: 0; }
-    15% { opacity: 1; }
-    85% { opacity: 1; }
-    100% { transform: translateX(-160%); opacity: 0; }
+    0% { transform: translateX(160%); opacity: 0; }
+    10% { opacity: 1; transform: translateX(120%); }
+    90% { opacity: 1; transform: translateX(-180%); }
+    99% { opacity: 1; transform: translateX(-235%); }
+    100% { transform: translateX(-280%); opacity: 0; }
 }
 
 .quick-actions {
