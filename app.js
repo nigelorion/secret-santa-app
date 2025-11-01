@@ -25,7 +25,6 @@ const TOTAL_PARTICIPANTS_TARGET = 10;
 
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
     experimentalAutoDetectLongPolling: true,
     useFetchStreams: false
 });
@@ -166,12 +165,8 @@ function showMessage(message, type) {
 
 function showView(view) {
     state.view = view;
-    const signupTab = document.getElementById('signupTab');
     const adminTab = document.getElementById('adminTab');
 
-    if (signupTab) {
-        signupTab.classList.toggle('active', view === 'signup');
-    }
     if (adminTab) {
         if (adminTab.classList.contains('tab-button')) {
             adminTab.classList.toggle('active', view === 'admin' || view === 'admin-login');

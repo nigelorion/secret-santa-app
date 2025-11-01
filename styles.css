@@ -83,13 +83,25 @@ body::after {
     margin-bottom: 12px;
 }
 
-.header-gif {
-    width: min(220px, 60%);
-    border: 3px solid rgba(245, 214, 123, 0.4);
-    border-radius: 12px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-    margin: 16px auto 12px;
-    display: block;
+.header-sleigh {
+    position: relative;
+    width: 100%;
+    max-width: 260px;
+    height: 48px;
+    margin: 18px auto 0;
+    overflow: hidden;
+}
+
+.sleigh-emoji {
+    position: absolute;
+    display: inline-block;
+    font-size: 32px;
+    animation: sleigh-fly 6s linear infinite;
+}
+
+@keyframes sleigh-fly {
+    0% { transform: translateX(-110%); }
+    100% { transform: translateX(110%); }
 }
 
 .quick-actions {
@@ -569,8 +581,9 @@ button:active {
         margin-bottom: 32px;
     }
 
-    .header-gif {
-        width: min(200px, 70%);
+    .header-sleigh {
+        max-width: 220px;
+        height: 40px;
     }
 
     .quick-actions {
@@ -614,8 +627,9 @@ button:active {
         font-size: 24px;
     }
 
-    .header-gif {
-        width: min(180px, 80%);
+    .header-sleigh {
+        max-width: 200px;
+        height: 36px;
     }
 
     .cassette-row {
