@@ -1,35 +1,14 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-    initializeFirestore,
-    collection,
-    getDocs,
-    addDoc,
-    updateDoc,
-    doc,
-    setDoc,
-    getDoc,
-    deleteDoc
-} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
-const firebaseConfig = {
-    apiKey: 'AIzaSyD_w3zUhizJZsjdtrzTkq_lAePsvAFVM_o',
-    authDomain: 'secret-manta-ff7b6.firebaseapp.com',
-    projectId: 'secret-manta-ff7b6',
-    storageBucket: 'secret-manta-ff7b6.firebasestorage.app',
-    messagingSenderId: '138324851995',
-    appId: '1:138324851995:web:e82a5ec02d2e81c0e6e7be',
-    measurementId: 'G-5D1MW1MP7C'
-};
-
-const TOTAL_PARTICIPANTS_TARGET = 10;
-
-const app = initializeApp(firebaseConfig);
-const db = initializeFirestore(app, {
-    experimentalAutoDetectLongPolling: true,
-    useFetchStreams: false
-});
-
-window.db = db;
+    state,
+    TOTAL_PARTICIPANTS_TARGET,
+    loadFromFirebase,
+    saveParticipant,
+    saveConfig,
+    updateConfig as updateConfigState,
+    clearAllParticipants as clearAllParticipantsData,
+    parseHistoricalPairings,
+    hashPassword
+} from './state.js';
 
 function handleFocusScroll(event) {
     const target = event.target;
@@ -40,8 +19,6 @@ function handleFocusScroll(event) {
         target.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }, 120);
 }
-
-document.addEventListener('focusin', handleFocusScroll);
 
 function triggerCelebration() {
     const overlay = document.createElement('div');
@@ -61,8 +38,6 @@ function triggerCelebration() {
     setTimeout(() => overlay.remove(), 6500);
 }
 
-window.triggerCelebration = triggerCelebration;
-
 function getDaysUntilChristmas() {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -74,111 +49,9 @@ function getDaysUntilChristmas() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-window.getDaysUntilChristmas = getDaysUntilChristmas;
-
-function getDaysUntilChristmasLocal() {
-    return getDaysUntilChristmas();
-}
-
-let state = {
-    view: 'signup',
-    isAdminAuthenticated: false,
-    participants: [],
-    config: {
-        historicalPairings: { year1: '', year2: '' },
-        emailConfig: { serviceId: '', templateId: '', publicKey: '' },
-        admin: { passwordHash: '' }
-    }
-};
-
-window.initApp = async function() {
-    await loadFromFirebase();
-    render();
-};
-
-async function loadFromFirebase() {
-    try {
-        const participantsSnapshot = await getDocs(collection(db, 'participants'));
-        state.participants = participantsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        const configDoc = await getDoc(doc(db, 'config', 'settings'));
-        if (configDoc.exists()) {
-            const configData = configDoc.data();
-            state.config = {
-                ...state.config,
-                ...configData,
-                historicalPairings: {
-                    ...state.config.historicalPairings,
-                    ...(configData.historicalPairings || {})
-                },
-                emailConfig: {
-                    ...state.config.emailConfig,
-                    ...(configData.emailConfig || {})
-                },
-                admin: {
-                    ...state.config.admin,
-                    ...(configData.admin || {})
-                }
-            };
-        }
-
-        const storedSession = localStorage.getItem('adminSession');
-        if (storedSession && state.config.admin.passwordHash && storedSession === state.config.admin.passwordHash) {
-            state.isAdminAuthenticated = true;
-        } else {
-            localStorage.removeItem('adminSession');
-        }
-        localStorage.removeItem('adminPassword');
-        updateProgressBar();
-        updateCountdown();
-    } catch (error) {
-        console.error('Error loading from Firebase:', error);
-    }
-}
-
-async function saveParticipant(participant) {
-    try {
-        const docRef = await addDoc(collection(db, 'participants'), participant);
-        participant.id = docRef.id;
-        state.participants.push(participant);
-    } catch (error) {
-        console.error('Error saving participant:', error);
-        throw error;
-    }
-}
-
-async function saveConfig() {
-    try {
-        await setDoc(doc(db, 'config', 'settings'), state.config);
-    } catch (error) {
-        console.error('Error saving config:', error);
-    }
-}
-
 function showMessage(message, type) {
     const typeClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
     return `<div class="message ${typeClass}">${message}</div>`;
-}
-
-function showView(view) {
-    state.view = view;
-    const adminTab = document.getElementById('adminTab');
-    if (adminTab) {
-        adminTab.classList.toggle('admin-entry-active', view === 'admin' || view === 'admin-login');
-    }
-    render();
-}
-
-function toggleQuickPicks(forceOpen) {
-    const section = document.getElementById('quickPicksSection');
-    const toggleButton = document.getElementById('quickPicksToggle');
-    if (!section || !toggleButton) return;
-    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !section.classList.contains('open');
-    section.classList.toggle('open', shouldOpen);
-    toggleButton.classList.toggle('active', shouldOpen);
-    toggleButton.textContent = shouldOpen ? '− Hide quick picks' : '➕ Add quick picks (optional)';
-    const inputs = section.querySelectorAll('input');
-    inputs.forEach(input => { input.disabled = !shouldOpen; });
 }
 
 function updateProgressBar() {
@@ -214,8 +87,7 @@ function updateProgressBar() {
 }
 
 function updateCountdown() {
-    const days = getDaysUntilChristmasLocal();
-    state.daysUntilChristmas = days;
+    const days = getDaysUntilChristmas();
     let message = '🎄 Christmas is here!';
     if (days > 1) {
         message = `🎅 ${days} days until Christmas`;
@@ -230,6 +102,51 @@ function updateCountdown() {
 
     const adminCountdown = document.getElementById('adminCountdown');
     if (adminCountdown) adminCountdown.textContent = message;
+}
+
+function toggleQuickPicks(forceOpen) {
+    const section = document.getElementById('quickPicksSection');
+    const toggleButton = document.getElementById('quickPicksToggle');
+    if (!section || !toggleButton) return;
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !section.classList.contains('open');
+    section.classList.toggle('open', shouldOpen);
+    toggleButton.classList.toggle('active', shouldOpen);
+    toggleButton.textContent = shouldOpen ? '− Hide quick picks' : '➕ Add quick picks (optional)';
+    const inputs = section.querySelectorAll('input');
+    inputs.forEach(input => { input.disabled = !shouldOpen; });
+}
+
+function scrollToSignup() {
+    const navigate = () => {
+        const anchor = document.getElementById('signupFormTop');
+        if (anchor) {
+            anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        setTimeout(() => {
+            const nameField = document.querySelector('form#signupForm input[name="name"]');
+            if (nameField) {
+                nameField.focus();
+            }
+        }, 250);
+    };
+
+    if (state.view !== 'signup') {
+        showView('signup');
+        setTimeout(navigate, 150);
+    } else {
+        navigate();
+    }
+}
+
+function showView(view) {
+    state.view = view;
+    const adminTab = document.getElementById('adminTab');
+    if (adminTab) {
+        adminTab.classList.toggle('admin-entry-active', view === 'admin' || view === 'admin-login');
+    }
+    render();
 }
 
 async function handleSignup(event) {
@@ -262,7 +179,7 @@ async function handleSignup(event) {
         return;
     }
 
-    if (state.participants.some(p => p.email.toLowerCase() === email.toLowerCase() || p.name.toLowerCase() === name.toLowerCase())) {
+    if (state.participants.some(p => p.email?.toLowerCase() === email.toLowerCase() || p.name?.toLowerCase() === name.toLowerCase())) {
         document.getElementById('signupMessage').innerHTML = showMessage('Oops! You are already signed up this year. If you need to update your info, contact the organizer.', 'error');
         return;
     }
@@ -292,40 +209,10 @@ async function handleSignup(event) {
         updateProgressBar();
         updateCountdown();
         document.getElementById('signupMessage').innerHTML = showMessage('🎉 Successfully signed up! You\'ll receive an email once Secret Santa assignments are made.', 'success');
-        const topAnchor = document.getElementById('signupFormTop');
-        if (topAnchor) {
-            topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
         triggerCelebration();
     } catch (uiError) {
         console.error('Signup UI update error:', uiError);
         document.getElementById('signupMessage').innerHTML = showMessage('You\'re signed up, but we hit a snag updating the page. Refresh to double-check your info.', 'info');
-    }
-}
-
-function scrollToSignup() {
-    const navigate = () => {
-        const anchor = document.getElementById('signupFormTop');
-        if (anchor) {
-            anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        setTimeout(() => {
-            const nameField = document.querySelector('form#signupForm input[name="name"]');
-            if (nameField) {
-                nameField.focus();
-            }
-        }, 250);
-    };
-
-    if (state.view !== 'signup') {
-        showView('signup');
-        setTimeout(navigate, 150);
-    } else {
-        navigate();
     }
 }
 
@@ -418,81 +305,8 @@ async function handleChangePassword(event) {
     }
 }
 
-async function hashPassword(password) {
-    if (window.crypto && window.crypto.subtle) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(password);
-        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
-    }
-    return password;
-}
-
-function parseHistoricalPairings() {
-    const pairings = [];
-    [state.config.historicalPairings.year1, state.config.historicalPairings.year2].forEach(yearData => {
-        if (!yearData || !yearData.trim()) return;
-        const pairs = yearData.split(/[,\n]/).map(p => p.trim()).filter(p => p);
-        pairs.forEach(pair => {
-            const match = pair.match(/(.+?)\s*[-→>]\s*(.+)/);
-            if (match) {
-                pairings.push({ giver: match[1].trim(), receiver: match[2].trim() });
-            }
-        });
-    });
-    return pairings;
-}
-
-async function runSecretSanta() {
-    if (state.participants.length < 3) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Need at least 3 participants!', 'error');
-        return;
-    }
-
-    if (!state.config.emailConfig.serviceId || !state.config.emailConfig.templateId || !state.config.emailConfig.publicKey) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Please configure EmailJS settings first!', 'error');
-        return;
-    }
-
-    const historicalPairs = parseHistoricalPairings();
-    const spouseMap = {};
-    state.participants.forEach(p => {
-        if (p.spouseName) {
-            spouseMap[p.name] = p.spouseName;
-            spouseMap[p.spouseName] = p.name;
-        }
-    });
-
-    const shuffled = [...state.participants].sort(() => Math.random() - 0.5);
-    const assignments = [];
-    const available = [...shuffled];
-
-    for (const giver of shuffled) {
-        const receiverIndex = available.findIndex(r => {
-            if (r.name === giver.name) return false;
-            const giverSpouse = spouseMap[giver.name];
-            if (giverSpouse && r.name.toLowerCase() === giverSpouse.toLowerCase()) return false;
-
-            const recentReceivers = historicalPairs
-                .filter(p => p.giver.toLowerCase() === giver.name.toLowerCase())
-                .map(p => p.receiver.toLowerCase());
-
-            if (recentReceivers.includes(r.name.toLowerCase())) return false;
-            return true;
-        });
-
-        if (receiverIndex === -1) {
-            document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
-            return;
-        }
-
-        const receiver = available[receiverIndex];
-        assignments.push({ giver, receiver });
-        available.splice(receiverIndex, 1);
-    }
-
-    await sendEmails(assignments);
+function parseAssignments() {
+    return parseHistoricalPairings();
 }
 
 async function sendEmails(assignments) {
@@ -503,7 +317,7 @@ async function sendEmails(assignments) {
 
         let successCount = 0;
         let failCount = 0;
-        const daysUntilChristmas = getDaysUntilChristmasLocal();
+        const daysUntilChristmas = getDaysUntilChristmas();
         const countdownLine = daysUntilChristmas > 1
             ? `${daysUntilChristmas} days until Christmas`
             : daysUntilChristmas === 1
@@ -553,6 +367,57 @@ async function sendEmails(assignments) {
     }
 }
 
+async function runSecretSanta() {
+    if (state.participants.length < 3) {
+        document.getElementById('adminMessage').innerHTML = showMessage('Need at least 3 participants!', 'error');
+        return;
+    }
+
+    if (!state.config.emailConfig.serviceId || !state.config.emailConfig.templateId || !state.config.emailConfig.publicKey) {
+        document.getElementById('adminMessage').innerHTML = showMessage('Please configure EmailJS settings first!', 'error');
+        return;
+    }
+
+    const historicalPairs = parseAssignments();
+    const spouseMap = {};
+    state.participants.forEach(p => {
+        if (p.spouseName) {
+            spouseMap[p.name] = p.spouseName;
+            spouseMap[p.spouseName] = p.name;
+        }
+    });
+
+    const shuffled = [...state.participants].sort(() => Math.random() - 0.5);
+    const assignments = [];
+    const available = [...shuffled];
+
+    for (const giver of shuffled) {
+        const receiverIndex = available.findIndex(r => {
+            if (r.name === giver.name) return false;
+            const giverSpouse = spouseMap[giver.name];
+            if (giverSpouse && r.name?.toLowerCase() === giverSpouse.toLowerCase()) return false;
+
+            const recentReceivers = historicalPairs
+                .filter(p => p.giver?.toLowerCase() === giver.name?.toLowerCase())
+                .map(p => p.receiver.toLowerCase());
+
+            if (recentReceivers.includes(r.name.toLowerCase())) return false;
+            return true;
+        });
+
+        if (receiverIndex === -1) {
+            document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
+            return;
+        }
+
+        const receiver = available[receiverIndex];
+        assignments.push({ giver, receiver });
+        available.splice(receiverIndex, 1);
+    }
+
+    await sendEmails(assignments);
+}
+
 async function clearAllParticipants() {
     if (!state.isAdminAuthenticated) return;
     const confirmed = window.confirm('This will remove everyone who has signed up. Continue?');
@@ -566,10 +431,7 @@ async function clearAllParticipants() {
             }
             return;
         }
-        const snapshot = await getDocs(collection(db, 'participants'));
-        const deletions = snapshot.docs.map(d => deleteDoc(doc(db, 'participants', d.id)));
-        await Promise.all(deletions);
-        state.participants = [];
+        await clearAllParticipantsData();
         updateProgressBar();
         render();
         const messageContainer = document.getElementById('adminMessage');
@@ -585,19 +447,8 @@ async function clearAllParticipants() {
     }
 }
 
-async function updateConfig(field, value) {
-    if (field.includes('.')) {
-        const [obj, key] = field.split('.');
-        if (!state.config[obj]) {
-            state.config[obj] = {};
-        }
-        state.config[obj][key] = value;
-    } else if (['serviceId', 'templateId', 'publicKey'].includes(field)) {
-        state.config.emailConfig[field] = value;
-    } else {
-        state.config[field] = value;
-    }
-    await saveConfig();
+function updateConfig(field, value) {
+    return updateConfigState(field, value);
 }
 
 function render() {
@@ -798,16 +649,6 @@ function escapeHtml(text) {
         .replace(/'/g, '&#39;');
 }
 
-window.showView = showView;
-window.toggleQuickPicks = toggleQuickPicks;
-window.handleSignup = handleSignup;
-window.handleAdminLogin = handleAdminLogin;
-window.handleChangePassword = handleChangePassword;
-window.updateConfig = updateConfig;
-window.runSecretSanta = runSecretSanta;
-window.clearAllParticipants = clearAllParticipants;
-window.scrollToSignup = scrollToSignup;
-
 function setupStaticListeners() {
     const signupButton = document.getElementById('signupButton');
     if (signupButton) {
@@ -819,7 +660,22 @@ function setupStaticListeners() {
     }
 }
 
-window.addEventListener('load', () => {
-    if (window.initApp) window.initApp();
+async function initializeUI() {
+    document.addEventListener('focusin', handleFocusScroll);
     setupStaticListeners();
-});
+    await loadFromFirebase();
+    showView(state.view || 'signup');
+}
+
+export {
+    initializeUI,
+    showView,
+    toggleQuickPicks,
+    handleSignup,
+    handleAdminLogin,
+    handleChangePassword,
+    updateConfig,
+    runSecretSanta,
+    clearAllParticipants,
+    scrollToSignup
+};
