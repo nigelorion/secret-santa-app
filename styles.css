@@ -100,6 +100,34 @@ body::after {
     margin-top: 6px;
 }
 
+.quick-actions {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+}
+
+.primary-entry {
+    background: linear-gradient(135deg, #f5d67b, #f29f6b);
+    color: #10261c;
+    padding: 12px 26px;
+    border-radius: 999px;
+    border: none;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.primary-entry:hover,
+.primary-entry:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.3);
+}
+
 .pixel-icon {
     font-size: 52px;
     display: inline-block;
@@ -549,6 +577,17 @@ button:active {
         width: min(200px, 70%);
     }
 
+    .quick-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .primary-entry,
+    .admin-entry {
+        width: 100%;
+        justify-content: center;
+    }
+
     .container {
         padding-bottom: 200px;
     }
@@ -581,6 +620,10 @@ button:active {
 
     .header-gif {
         width: min(180px, 80%);
+    }
+
+    .cassette-row {
+        font-size: 16px;
     }
 
     input,

@@ -21,8 +21,11 @@
         </div>
 
         <div class="card">
+            <div class="quick-actions">
+                <button type="button" class="primary-entry" onclick="scrollToSignup()">Sign Up</button>
+                <button type="button" class="admin-entry" onclick="showView('admin-login')" id="adminTab">Admin Access</button>
+            </div>
             <div id="content"></div>
-            <button type="button" class="admin-entry" onclick="showView('admin-login')" id="adminTab">Admin Access</button>
         </div>
     </div>
     <script type="module" src="app.js"></script>

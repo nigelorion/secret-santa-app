@@ -1,6 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-    getFirestore,
     initializeFirestore,
     collection,
     getDocs,
@@ -25,8 +24,11 @@ const firebaseConfig = {
 const TOTAL_PARTICIPANTS_TARGET = 10;
 
 const app = initializeApp(firebaseConfig);
-initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });
-const db = getFirestore(app);
+const db = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: true,
+    useFetchStreams: false
+});
 
 const firestoreModules = { collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc };
 
@@ -306,6 +308,24 @@ async function handleSignup(event) {
     } catch (uiError) {
         console.error('Signup UI update error:', uiError);
         document.getElementById('signupMessage').innerHTML = showMessage('You\'re signed up, but we hit a snag updating the page. Refresh to double-check your info.', 'info');
+    }
+}
+
+function scrollToSignup() {
+    const navigate = () => {
+        const anchor = document.getElementById('signupFormTop');
+        if (anchor) {
+            anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    if (state.view !== 'signup') {
+        showView('signup');
+        setTimeout(navigate, 150);
+    } else {
+        navigate();
     }
 }
 
@@ -792,6 +812,7 @@ window.handleChangePassword = handleChangePassword;
 window.updateConfig = updateConfig;
 window.runSecretSanta = runSecretSanta;
 window.clearAllParticipants = clearAllParticipants;
+window.scrollToSignup = scrollToSignup;
 
 window.addEventListener('load', () => {
     if (window.initApp) window.initApp();
