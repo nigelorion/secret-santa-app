@@ -17,9 +17,12 @@
 
         body {
             font-family: 'Montserrat', sans-serif;
-            background: linear-gradient(180deg, #123428 0%, #255643 50%, #123428 100%);
-            color: #e8fff6;
+            background:
+                linear-gradient(180deg, rgba(18, 52, 40, 0.92), rgba(18, 32, 24, 0.95)),
+                url('https://images.unsplash.com/photo-1513708929605-a48a0794b0d4?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+            color: #f6fbf8;
             min-height: 100vh;
+            min-height: 100dvh;
             padding: 20px;
             position: relative;
             overflow-x: hidden;
@@ -43,46 +46,55 @@
             z-index: 0;
         }
 
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at top, rgba(255, 235, 200, 0.18) 0%, rgba(10, 25, 20, 0.75) 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
         .container {
-            max-width: 800px;
+            max-width: 840px;
             margin: 0 auto;
+            padding-bottom: 120px;
             position: relative;
             z-index: 1;
         }
 
         .card {
-            background: #0a1f1a;
-            border: 4px solid #4a9d7f;
-            box-shadow: 
-                0 0 0 2px #0a1f1a,
-                0 0 0 6px #2d5f4d,
-                8px 8px 0 0 rgba(0,0,0,0.3);
-            padding: 30px;
+            background: rgba(12, 28, 22, 0.85);
+            border: 4px solid #d95b5b;
+            box-shadow:
+                0 0 0 2px rgba(10, 25, 20, 0.85),
+                0 0 0 6px rgba(216, 186, 114, 0.55),
+                12px 12px 0 0 rgba(0,0,0,0.35);
+            padding: 32px;
             margin-bottom: 20px;
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
+            backdrop-filter: blur(4px);
         }
 
         .header {
             text-align: center;
-            margin-bottom: 40px;
-            padding: 20px;
-            background: #0f2a20;
-            border: 3px solid #5fb89d;
+            margin-bottom: 48px;
+            padding: 26px 20px;
+            background: linear-gradient(135deg, rgba(31, 77, 58, 0.95), rgba(15, 36, 26, 0.9));
+            border: 3px solid #f5d67b;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
         }
 
         .header h1 {
-            color: #8fedd4;
+            color: #f5d67b;
             font-family: 'Press Start 2P', cursive;
             font-size: 28px;
             line-height: 1.5;
-            text-shadow: 3px 3px 0 #1a3a2e;
-            margin-bottom: 10px;
+            text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45);
+            margin-bottom: 12px;
         }
 
         .pixel-icon {
-            font-size: 48px;
+            font-size: 52px;
             display: inline-block;
             animation: float 3s ease-in-out infinite;
         }
@@ -94,54 +106,59 @@
 
         .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            border-bottom: 4px solid #2d5f4d;
-            padding-bottom: 10px;
+            gap: 12px;
+            margin-bottom: 34px;
+            border-bottom: 4px solid rgba(245, 214, 123, 0.35);
+            padding-bottom: 12px;
         }
 
         .tab-button {
             font-family: 'Montserrat', sans-serif;
             font-weight: 600;
             font-size: 13px;
-            padding: 15px 20px;
-            background: #1a3a2e;
-            color: #8fedd4;
-            border: 3px solid #4a9d7f;
+            padding: 16px 22px;
+            background: rgba(217, 91, 91, 0.2);
+            color: #fcefe5;
+            border: 2px solid rgba(245, 214, 123, 0.5);
             cursor: pointer;
-            transition: all 0.1s;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
             text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-radius: 6px;
         }
 
         .tab-button:hover {
-            background: #2d5f4d;
+            background: rgba(217, 91, 91, 0.45);
             transform: translate(-2px, -2px);
-            box-shadow: 4px 4px 0 0 rgba(0,0,0,0.3);
+            box-shadow: 5px 5px 0 0 rgba(0,0,0,0.28);
         }
 
         .tab-button.active {
-            background: #4a9d7f;
-            color: #0a1f1a;
-            border-color: #8fedd4;
+            background: linear-gradient(135deg, rgba(217, 91, 91, 0.9), rgba(148, 35, 35, 0.9));
+            color: #fff9ec;
+            border-color: rgba(245, 214, 123, 0.85);
+            box-shadow: 0 8px 22px rgba(0,0,0,0.25);
         }
 
         h2 {
-            color: #8fedd4;
+            color: #f5d67b;
             font-family: 'Press Start 2P', cursive;
-            font-size: 20px;
+            font-size: 22px;
             margin-bottom: 25px;
-            text-shadow: 2px 2px 0 #1a3a2e;
+            text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
         }
 
         h3 {
-            color: #5fb89d;
-            font-size: 16px;
+            color: #f29f6b;
+            font-size: 17px;
             margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
         label {
             display: block;
-            color: #8fedd4;
+            color: #f5f1e8;
             font-size: 13px;
             font-weight: 600;
             margin-bottom: 8px;
@@ -150,24 +167,27 @@
 
         input, textarea {
             width: 100%;
-            padding: 12px;
-            background: #0a1f1a;
-            border: 3px solid #2d5f4d;
-            color: #8fedd4;
+            padding: 14px 16px;
+            background: rgba(15, 36, 28, 0.85);
+            border: 2px solid rgba(245, 214, 123, 0.55);
+            border-radius: 8px;
+            color: #fdf8f0;
             font-family: 'Montserrat', sans-serif;
             font-size: 14px;
             margin-bottom: 20px;
             transition: all 0.2s;
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+            scroll-margin-bottom: 160px;
         }
 
         input:focus, textarea:focus {
             outline: none;
-            border-color: #4a9d7f;
-            box-shadow: 0 0 0 3px rgba(143, 237, 212, 0.2);
+            border-color: #f5d67b;
+            box-shadow: 0 0 0 3px rgba(245, 214, 123, 0.25);
         }
 
         input::placeholder, textarea::placeholder {
-            color: #2d5f4d;
+            color: rgba(236, 204, 150, 0.65);
         }
 
         button {
@@ -175,25 +195,27 @@
             font-size: 14px;
             font-weight: 600;
             padding: 15px 30px;
-            background: #4a9d7f;
-            color: #0a1f1a;
-            border: 3px solid #8fedd4;
+            background: linear-gradient(135deg, #d95b5b, #942323);
+            color: #fff9ec;
+            border: 0;
             cursor: pointer;
             transition: all 0.1s;
             width: 100%;
             text-transform: uppercase;
             margin-top: 10px;
+            border-radius: 8px;
+            letter-spacing: 0.08em;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
 
         button:hover {
-            background: #5fb89d;
             transform: translate(-3px, -3px);
-            box-shadow: 5px 5px 0 0 rgba(0,0,0,0.4);
+            box-shadow: 6px 6px 0 0 rgba(43, 14, 14, 0.55);
         }
 
         button:active {
             transform: translate(0, 0);
-            box-shadow: 2px 2px 0 0 rgba(0,0,0,0.4);
+            box-shadow: 2px 2px 0 0 rgba(0,0,0,0.45);
         }
 
         .message {
@@ -202,64 +224,69 @@
             border: 3px solid;
             font-size: 14px;
             line-height: 1.5;
+            border-radius: 6px;
         }
 
         .message.success {
-            background: rgba(143, 237, 212, 0.1);
-            border-color: #4a9d7f;
-            color: #8fedd4;
+            background: rgba(71, 152, 116, 0.2);
+            border-color: rgba(121, 189, 152, 0.7);
+            color: #d1f0dd;
         }
 
         .message.error {
-            background: rgba(237, 143, 143, 0.1);
-            border-color: #c74a4a;
-            color: #ed8f8f;
+            background: rgba(217, 91, 91, 0.18);
+            border-color: rgba(217, 91, 91, 0.65);
+            color: #ffd5d5;
         }
 
         .message.info {
-            background: rgba(143, 189, 237, 0.1);
-            border-color: #4a7f9d;
-            color: #8fbded;
+            background: rgba(245, 214, 123, 0.12);
+            border-color: rgba(245, 214, 123, 0.55);
+            color: #fcefd7;
         }
 
         .participant-card {
-            background: #0f2a20;
-            border: 2px solid #2d5f4d;
+            background: rgba(15, 36, 28, 0.75);
+            border: 1px solid rgba(245, 214, 123, 0.25);
             padding: 15px;
             margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.25);
         }
 
         .participant-card p {
             font-size: 14px;
-            color: #8fedd4;
+            color: #f5f1e8;
             margin-bottom: 5px;
         }
 
         .section-box {
-            background: rgba(15, 42, 32, 0.5);
-            border: 3px solid;
+            background: rgba(15, 36, 28, 0.7);
+            border: 2px solid rgba(245, 214, 123, 0.35);
             padding: 20px;
             margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 12px 26px rgba(0,0,0,0.25);
         }
 
         .section-box.yellow {
-            border-color: #9d9d4a;
+            border-color: rgba(245, 214, 123, 0.55);
         }
 
         .section-box.blue {
-            border-color: #4a7f9d;
+            border-color: rgba(242, 159, 107, 0.45);
         }
 
         .helper-text {
             font-size: 12px;
-            color: #9adbc7;
+            color: rgba(245, 214, 123, 0.75);
             line-height: 1.4;
             margin-top: 5px;
         }
 
         .warning-text {
             font-size: 13px;
-            color: #9d9d4a;
+            color: rgba(245, 214, 123, 0.85);
             text-align: center;
             margin-top: 15px;
             line-height: 1.5;
@@ -274,13 +301,61 @@
             height: 100px;
             background: repeating-linear-gradient(
                 90deg,
-                transparent,
-                transparent 50px,
-                rgba(74, 157, 127, 0.1) 50px,
-                rgba(74, 157, 127, 0.1) 60px
+                rgba(12, 28, 22, 0),
+                rgba(12, 28, 22, 0) 48px,
+                rgba(31, 77, 58, 0.15) 48px,
+                rgba(31, 77, 58, 0.15) 62px
             );
             pointer-events: none;
             z-index: 0;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+
+            .container {
+                padding-bottom: 200px;
+            }
+
+            .card {
+                padding: 24px;
+                margin-bottom: 16px;
+            }
+
+            .tabs {
+                flex-direction: column;
+                gap: 10px;
+                border-bottom: none;
+            }
+
+            .tab-button {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 520px) {
+            html {
+                font-size: 94%;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            input, textarea {
+                font-size: 15px;
+            }
+
+            textarea {
+                min-height: 140px;
+            }
+
+            .warning-text {
+                font-size: 12px;
+            }
         }
     </style>
     <script type="module">
@@ -441,6 +516,12 @@
             const email = formData.get('email');
             const wishlist = formData.get('wishlist');
             const spouseName = formData.get('spouseName');
+            const quickPick1 = formData.get('quickPick1');
+            const quickPick2 = formData.get('quickPick2');
+            const quickPick3 = formData.get('quickPick3');
+            const quickPick1Link = formData.get('quickPick1Link');
+            const quickPick2Link = formData.get('quickPick2Link');
+            const quickPick3Link = formData.get('quickPick3Link');
 
             if (state.participants.some(p => p.email.toLowerCase() === email.toLowerCase() || p.name.toLowerCase() === name.toLowerCase())) {
                 document.getElementById('signupMessage').innerHTML = showMessage('Oops! You are already signed up this year. If you need to update your info, contact the organizer.', 'error');
@@ -448,7 +529,18 @@
             }
 
             try {
-                await saveParticipant({ name, email, wishlist, spouseName, timestamp: Date.now() });
+                await saveParticipant({
+                    name,
+                    email,
+                    wishlist,
+                    spouseName,
+                    quickPicks: [
+                        { title: quickPick1, link: quickPick1Link },
+                        { title: quickPick2, link: quickPick2Link },
+                        { title: quickPick3, link: quickPick3Link }
+                    ].filter(item => item.title || item.link),
+                    timestamp: Date.now()
+                });
                 event.target.reset();
                 document.getElementById('signupMessage').innerHTML = showMessage('🎉 Successfully signed up! You\'ll receive an email once Secret Santa assignments are made.', 'success');
                 setTimeout(() => { document.getElementById('signupMessage').innerHTML = ''; }, 5000);
@@ -625,6 +717,17 @@
                 
                 for (const assignment of assignments) {
                     try {
+                        const quickPicks = (assignment.receiver.quickPicks || []).slice(0, 3).map(item => {
+                            const hasTitle = item && item.title;
+                            const hasLink = item && item.link;
+                            if (hasTitle && hasLink) {
+                                return `${item.title} — ${item.link}`;
+                            }
+                            if (hasTitle) return item.title;
+                            if (hasLink) return item.link;
+                            return '';
+                        }).filter(Boolean).join('\n');
+
                         await emailjs.send(
                             state.config.emailConfig.serviceId,
                             state.config.emailConfig.templateId,
@@ -632,7 +735,8 @@
                                 to_name: assignment.giver.name,
                                 to_email: assignment.giver.email,
                                 receiver_name: assignment.receiver.name,
-                                receiver_wishlist: assignment.receiver.wishlist || 'No wish list provided yet'
+                                receiver_wishlist: assignment.receiver.wishlist || 'No wish list provided yet',
+                                receiver_quick_picks: quickPicks || 'Surprise them—no quick picks added!'
                             }
                         );
                         successCount++;
@@ -685,8 +789,30 @@
                             <input type="email" name="email" required placeholder="ENTER EMAIL">
                         </div>
                         <div>
-                            <label>YOUR WISH LIST</label>
-                            <textarea name="wishlist" rows="4" placeholder="LIST GIFT IDEAS..."></textarea>
+                            <label>WISH LIST LETTER</label>
+                            <textarea name="wishlist" rows="5" placeholder="Say hi to your Santa, share what you\'re into this season, and mention any themes or surprises you\'d love."></textarea>
+                            <p class="helper-text">Tip: Keep it conversational—share interests, vibes, and anything you\'d rather avoid.</p>
+                        </div>
+                        <div class="section-box" style="padding:18px; margin-bottom:18px;">
+                            <h3 style="margin-bottom:12px; color:#f5d67b;">QUICK PICKS (OPTIONAL)</h3>
+                            <p class="helper-text" style="margin-bottom:10px;">Add up to three specific ideas or product links in case your Santa needs a nudge.</p>
+                            <div style="display:grid; gap:12px;">
+                                <div style="display:grid; gap:8px;">
+                                    <label style="margin-bottom:0;">ITEM 1 TITLE</label>
+                                    <input type="text" name="quickPick1" placeholder="Example: Cozy flannel pajamas">
+                                    <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set">
+                                </div>
+                                <div style="display:grid; gap:8px;">
+                                    <label style="margin-bottom:0;">ITEM 2 TITLE</label>
+                                    <input type="text" name="quickPick2" placeholder="Example: Cookbook from my wish list">
+                                    <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook">
+                                </div>
+                                <div style="display:grid; gap:8px;">
+                                    <label style="margin-bottom:0;">ITEM 3 TITLE</label>
+                                    <input type="text" name="quickPick3" placeholder="Example: Local coffee shop gift card">
+                                    <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card">
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <label>SPOUSE NAME *</label>
