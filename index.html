@@ -260,6 +260,27 @@
             margin-bottom: 5px;
         }
 
+        .participant-card ul {
+            margin: 8px 0 0;
+            padding-left: 20px;
+            color: #fcefd7;
+            font-size: 13px;
+        }
+
+        .participant-card ul li {
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+
+        .participant-card ul li a {
+            color: #9bd9f2;
+            text-decoration: underline;
+        }
+
+        .participant-card ul li a:hover {
+            color: #ccecff;
+        }
+
         .section-box {
             background: rgba(15, 36, 28, 0.7);
             border: 2px solid rgba(245, 214, 123, 0.35);
@@ -377,6 +398,18 @@
         window.db = db;
         window.firestoreModules = { collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc };
 
+        function handleFocusScroll(event) {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (!['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
+            if (window.innerWidth > 900) return;
+            setTimeout(() => {
+                target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }, 120);
+        }
+
+        document.addEventListener('focusin', handleFocusScroll);
+
         window.addEventListener('load', () => {
             if (window.initApp) window.initApp();
         });
@@ -420,6 +453,16 @@
             await loadFromFirebase();
             render();
         };
+
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
         async function hashPassword(password) {
             if (window.crypto && window.crypto.subtle) {
@@ -791,7 +834,6 @@
                         <div>
                             <label>WISH LIST LETTER</label>
                             <textarea name="wishlist" rows="5" placeholder="Say hi to your Santa, share what you\'re into this season, and mention any themes or surprises you\'d love."></textarea>
-                            <p class="helper-text">Tip: Keep it conversational—share interests, vibes, and anything you\'d rather avoid.</p>
                         </div>
                         <div class="section-box" style="padding:18px; margin-bottom:18px;">
                             <h3 style="margin-bottom:12px; color:#f5d67b;">QUICK PICKS (OPTIONAL)</h3>
@@ -816,8 +858,7 @@
                         </div>
                         <div>
                             <label>SPOUSE NAME *</label>
-                            <input type="text" name="spouseName" required placeholder="ENTER SPOUSE NAME">
-                            <p class="helper-text">YOU WON'T BE MATCHED WITH YOUR SPOUSE</p>
+                            <input type="text" name="spouseName" required placeholder="Enter spouse's name so you aren't matched together">
                         </div>
                         <button type="submit">SIGN ME UP! 🎅</button>
                     </form>
@@ -839,13 +880,31 @@
                 state.view = 'admin';
                 const participantsList = state.participants.length === 0 
                     ? '<p class="helper-text">NO PARTICIPANTS YET</p>'
-                    : state.participants.map(p => `
-                        <div class="participant-card">
-                            <p><strong>${p.name}</strong></p>
-                            <p>${p.email}</p>
-                            ${p.spouseName ? `<p>SPOUSE: ${p.spouseName}</p>` : ''}
-                        </div>
-                    `).join('');
+                    : state.participants.map(p => {
+                        const name = escapeHtml(p.name);
+                        const email = escapeHtml(p.email);
+                        const spouse = p.spouseName ? escapeHtml(p.spouseName) : '';
+                        const quickPicksHtml = (p.quickPicks && p.quickPicks.length)
+                            ? `<ul>${p.quickPicks.map((item, index) => {
+                                if (!item || (!item.title && !item.link)) return '';
+                                const title = item.title ? escapeHtml(item.title) : `Item ${index + 1}`;
+                                const link = item.link ? encodeURI(item.link) : '';
+                                if (link) {
+                                    return `<li>${title} — <a href="${link}" target="_blank" rel="noopener">view link</a></li>`;
+                                }
+                                return `<li>${title}</li>`;
+                            }).filter(Boolean).join('')}</ul>`
+                            : '';
+
+                        return `
+                            <div class="participant-card">
+                                <p><strong>${name}</strong></p>
+                                <p>${email}</p>
+                                ${spouse ? `<p>SPOUSE: ${spouse}</p>` : ''}
+                                ${quickPicksHtml ? `<p style="margin-top:8px; font-weight:600;">Quick Picks</p>${quickPicksHtml}` : ''}
+                            </div>
+                        `;
+                    }).join('');
 
                 content.innerHTML = `
                     <h2>ADMIN PANEL</h2>
