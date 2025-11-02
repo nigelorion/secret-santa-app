@@ -600,6 +600,27 @@ button:active {
     min-height: 360px;
 }
 
+.signup-shell.is-loading::after {
+    border-color: rgba(240, 180, 120, 0.25);
+}
+
+.signup-shell.is-complete {
+    border: 2px solid rgba(126, 214, 124, 0.45);
+    box-shadow:
+        0 18px 42px rgba(0, 0, 0, 0.45),
+        0 0 28px rgba(126, 214, 124, 0.6);
+}
+
+.signup-shell.is-complete::after {
+    border-color: rgba(126, 214, 124, 0.35);
+    animation: success-glow 2.4s ease-in-out infinite;
+}
+
+.sparkle-in {
+    opacity: 0;
+    animation: sparkle-fade 0.8s ease forwards;
+}
+
 .signup-shell form {
     display: grid;
     gap: 22px;
@@ -642,6 +663,86 @@ button:active {
     margin-bottom: 6px;
     font-weight: 600;
     letter-spacing: 0.05em;
+}
+
+.signup-loading {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    padding: 24px 0;
+}
+
+.loading-headline {
+    margin: 0;
+}
+
+.loading-subtext {
+    margin: 0;
+    opacity: 0.85;
+}
+
+.loading-lights {
+    display: flex;
+    gap: 12px;
+    font-size: 20px;
+    animation: lights-dance 1.8s linear infinite;
+}
+
+.loading-lights span {
+    filter: drop-shadow(0 0 6px rgba(245, 214, 123, 0.6));
+}
+
+.signup-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    padding: 14px 0;
+}
+
+.signup-success h2 {
+    font-size: 28px;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.success-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(126, 214, 124, 0.95), rgba(20, 60, 40, 0.85));
+    display: grid;
+    place-items: center;
+    font-size: 32px;
+    box-shadow: 0 0 18px rgba(126, 214, 124, 0.7);
+    animation: badge-pop 0.9s ease forwards;
+}
+
+@keyframes lights-dance {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(8px); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes badge-pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes sparkle-fade {
+    0% { opacity: 0; transform: translateY(18px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes success-glow {
+    0%, 100% { opacity: 0.65; box-shadow: 0 0 24px rgba(126, 214, 124, 0.4); }
+    50% { opacity: 1; box-shadow: 0 0 36px rgba(126, 214, 124, 0.65); }
 }
 
 /* Pixel trees decoration */

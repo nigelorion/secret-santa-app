@@ -14,7 +14,7 @@ import {
 
 // Tries this many shuffles before declaring the constraints impossible.
 const MAX_ASSIGNMENT_ATTEMPTS = 400;
-const MIN_SIGNUP_SPIN_MS = 900;
+const MIN_SIGNUP_SPIN_MS = 2200;
 let isRefreshingCount = false;
 
 function formatQuickPickLink(rawLink) {
@@ -890,15 +890,19 @@ function render() {
                         <span class="loader-ring"></span>
                         <span class="loader-bauble">🎄</span>
                     </div>
-                    <p class="success-lead" style="margin-bottom:10px;">Packing your wish list for the sleigh…</p>
-                    <p class="helper-text success-subtext">Hang tight while we wrap things up.</p>
+                    <div class="loading-lights">
+                        <span>✨</span><span>🎁</span><span>❄️</span><span>🕯️</span>
+                    </div>
+                    <p class="success-lead loading-headline">Packing your wish list for the sleigh…</p>
+                    <p class="helper-text success-subtext loading-subtext">Snowflakes swirling, elves matching—give us a sec!</p>
                 </div>
             `;
         } else if (state.signupComplete) {
-            shellClass += ' is-complete';
+            shellClass += ' is-complete sparkle-in';
             const celebrant = escapeHtml(state.lastSignupName || 'Secret Santa friend');
             shellContent = `
                 <div class="signup-success">
+                    <div class="success-badge">🎄</div>
                     <h2>YOU'RE ON THE NICE LIST!</h2>
                     <p class="success-lead">Thanks, ${celebrant}! Your wish list is tucked safely into Santa's machine.</p>
                     <p class="helper-text success-subtext">We’ll email you once the match-up goes out. Sit tight, sip some cocoa, and get ready to play Santa.</p>
