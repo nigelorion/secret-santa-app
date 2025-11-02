@@ -79,6 +79,7 @@ async function loadFromFirebase(options = {}) {
 
 // Saves a new participant document and updates local state.
 async function saveParticipant(participant) {
+    console.log('Submitting participant payload:', JSON.stringify(participant));
     const docRef = await addDoc(collection(db, 'participants'), participant);
     participant.id = docRef.id;
     state.participants.push(participant);
