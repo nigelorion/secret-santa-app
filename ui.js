@@ -156,6 +156,48 @@ function generateAssignments(context, disallowedMap) {
     return null;
 }
 
+// Converts the wishlist text into HTML-safe markup for emails.
+function formatWishlistHtml(wishlist) {
+    if (!wishlist || !wishlist.trim()) {
+        return '<em>No wish list provided yet</em>';
+    }
+    const escaped = escapeHtml(wishlist.trim());
+    return escaped.replace(/\r?\n\r?\n/g, '<br><br>').replace(/\r?\n/g, '<br>');
+}
+
+// Converts the quick picks to both plain text and HTML bullet list.
+function buildQuickPickFormats(quickPicks = []) {
+    const trimmed = (quickPicks || []).filter(item => item && (item.title || item.link)).slice(0, 3);
+    if (trimmed.length === 0) {
+        return {
+            text: 'Surprise them—no quick picks added!',
+            html: '<em>Surprise them—no quick picks added!</em>'
+        };
+    }
+
+    const text = trimmed.map(item => {
+        const title = item.title || '';
+        const link = item.link || '';
+        if (title && link) return `${title} — ${link}`;
+        return title || link;
+    }).filter(Boolean).join('\n');
+
+    const htmlItems = trimmed.map(item => {
+        const safeTitle = escapeHtml(item.title || 'Wishlist item');
+        const safeLink = (item.link || '').trim();
+        if (safeLink) {
+            const encodedLink = escapeHtml(safeLink);
+            return `<li><a href="${encodedLink}" target="_blank" rel="noopener">${safeTitle}</a></li>`;
+        }
+        return `<li>${safeTitle}</li>`;
+    }).join('');
+
+    return {
+        text: text || 'Surprise them—no quick picks added!',
+        html: `<ul>${htmlItems}</ul>`
+    };
+}
+
 // ===== General UI helpers =====
 
 // Keeps focused fields visible on small screens when the keyboard opens.
@@ -454,16 +496,9 @@ async function sendEmails(assignments) {
 
         for (const assignment of assignments) {
             try {
-                const quickPicks = (assignment.receiver.quickPicks || []).slice(0, 3).map(item => {
-                    const hasTitle = item && item.title;
-                    const hasLink = item && item.link;
-                    if (hasTitle && hasLink) {
-                        return `${item.title} — ${item.link}`;
-                    }
-                    if (hasTitle) return item.title;
-                    if (hasLink) return item.link;
-                    return '';
-                }).filter(Boolean).join('\n');
+                const wishlistPlain = assignment.receiver.wishlist || 'No wish list provided yet';
+                const wishlistHtml = formatWishlistHtml(assignment.receiver.wishlist);
+                const quickPickFormats = buildQuickPickFormats(assignment.receiver.quickPicks);
 
                 await emailjs.send(
                     state.config.emailConfig.serviceId,
@@ -472,8 +507,10 @@ async function sendEmails(assignments) {
                         to_name: assignment.giver.name,
                         to_email: assignment.giver.email,
                         receiver_name: assignment.receiver.name,
-                        receiver_wishlist: assignment.receiver.wishlist || 'No wish list provided yet',
-                        receiver_quick_picks: quickPicks || 'Surprise them—no quick picks added!',
+                        receiver_wishlist: wishlistPlain,
+                        receiver_wishlist_html: wishlistHtml,
+                        receiver_quick_picks: quickPickFormats.text,
+                        receiver_quick_picks_html: quickPickFormats.html,
                         countdown_to_christmas: countdownLine
                     }
                 );
