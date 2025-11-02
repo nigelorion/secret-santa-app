@@ -565,19 +565,20 @@ async function handleSignup(event) {
 async function refreshParticipantCount(options = {}) {
     if (isRefreshingCount && !options.force) return;
     isRefreshingCount = true;
+    const wasKnown = state.participantCountKnown && typeof state.participantCount === 'number';
     try {
         const snapshot = await getCountFromServer(collection(db, 'participants'));
         const currentCount = snapshot.data().count || 0;
         state.participantCount = currentCount;
         state.participantCountKnown = true;
-        if (!options.silent) {
+        if (!options.silent || !wasKnown) {
             render();
         }
     } catch (error) {
         console.error('Participant count refresh failed:', error);
         if (!state.participantCount) {
             state.participantCountKnown = false;
-            if (!options.silent) {
+            if (!options.silent || wasKnown) {
                 render();
             }
         }
