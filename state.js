@@ -26,6 +26,18 @@ const state = {
     lastSignupName: '',
     signupInFlight: false,
     signupMessage: { text: '', type: 'info' },
+    signupFormDraft: {
+        name: '',
+        email: '',
+        wishlist: '',
+        spouseName: '',
+        quickPick1: '',
+        quickPick2: '',
+        quickPick3: '',
+        quickPick1Link: '',
+        quickPick2Link: '',
+        quickPick3Link: ''
+    },
     participantCount: null,
     participantCountKnown: true,
     config: {
@@ -154,6 +166,18 @@ function setAdminAuth(user, claims = {}) {
         state.lastSignupName = '';
         state.signupInFlight = false;
         state.signupMessage = { text: '', type: 'info' };
+        state.signupFormDraft = {
+            name: '',
+            email: '',
+            wishlist: '',
+            spouseName: '',
+            quickPick1: '',
+            quickPick2: '',
+            quickPick3: '',
+            quickPick1Link: '',
+            quickPick2Link: '',
+            quickPick3Link: ''
+        };
         state.participantCount = null;
         state.participantCountKnown = true;
     }

@@ -408,6 +408,18 @@ async function handleSignup(event) {
     const quickPick2Link = (formData.get('quickPick2Link') || '').trim();
     const quickPick3Link = (formData.get('quickPick3Link') || '').trim();
     const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    state.signupFormDraft = {
+        name,
+        email,
+        wishlist,
+        spouseName,
+        quickPick1,
+        quickPick2,
+        quickPick3,
+        quickPick1Link,
+        quickPick2Link,
+        quickPick3Link
+    };
 
     if (typeof navigator !== 'undefined' && navigator && 'onLine' in navigator && !navigator.onLine) {
         setSignupMessage('Looks like you\'re offline. Reconnect to the internet, then try signing up again.', 'error');
@@ -524,6 +536,18 @@ async function handleSignup(event) {
         }
         state.participantCountKnown = true;
         state.signupMessage = { text: '', type: 'info' };
+        state.signupFormDraft = {
+            name: '',
+            email: '',
+            wishlist: '',
+            spouseName: '',
+            quickPick1: '',
+            quickPick2: '',
+            quickPick3: '',
+            quickPick1Link: '',
+            quickPick2Link: '',
+            quickPick3Link: ''
+        };
         state.signupInFlight = false;
         render();
         triggerCelebration();
@@ -828,15 +852,15 @@ function render() {
                 <form id="signupForm" onsubmit="handleSignup(event); return false;">
                     <div>
                         <label>YOUR FIRST NAME *</label>
-                        <input type="text" name="name" placeholder="FIRST NAME ONLY" autocomplete="given-name" required>
+                        <input type="text" name="name" placeholder="FIRST NAME ONLY" autocomplete="given-name" required value="${escapeHtml(state.signupFormDraft.name)}">
                     </div>
                     <div>
                         <label>YOUR EMAIL *</label>
-                        <input type="email" name="email" placeholder="ENTER EMAIL" autocomplete="email" required>
+                        <input type="email" name="email" placeholder="ENTER EMAIL" autocomplete="email" required value="${escapeHtml(state.signupFormDraft.email)}">
                     </div>
                     <div>
                         <label>WISH LIST LETTER</label>
-                        <textarea name="wishlist" rows="5" placeholder="Say hi to your Santa, share what you're into this season, and mention any themes or surprises you'd love."></textarea>
+                        <textarea name="wishlist" rows="5" placeholder="Say hi to your Santa, share what you're into this season, and mention any themes or surprises you'd love.">${escapeHtml(state.signupFormDraft.wishlist)}</textarea>
                     </div>
                     <button type="button" class="toggle-quick-picks" id="quickPicksToggle" onclick="toggleQuickPicks()">➕ Add quick picks (optional)</button>
                     <div class="section-box quick-picks" id="quickPicksSection">
@@ -845,24 +869,24 @@ function render() {
                         <div style="display:grid; gap:12px;">
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 1 TITLE</label>
-                                <input type="text" name="quickPick1" placeholder="Example: Cozy flannel pajamas" disabled>
-                                <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set" disabled>
+                                <input type="text" name="quickPick1" placeholder="Example: Cozy flannel pajamas" disabled value="${escapeHtml(state.signupFormDraft.quickPick1)}">
+                                <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set" disabled value="${escapeHtml(state.signupFormDraft.quickPick1Link)}">
                             </div>
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 2 TITLE</label>
-                                <input type="text" name="quickPick2" placeholder="Example: Cookbook from my wish list" disabled>
-                                <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook" disabled>
+                                <input type="text" name="quickPick2" placeholder="Example: Cookbook from my wish list" disabled value="${escapeHtml(state.signupFormDraft.quickPick2)}">
+                                <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook" disabled value="${escapeHtml(state.signupFormDraft.quickPick2Link)}">
                             </div>
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 3 TITLE</label>
-                                <input type="text" name="quickPick3" placeholder="Example: Local coffee shop gift card" disabled>
-                                <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card" disabled>
+                                <input type="text" name="quickPick3" placeholder="Example: Local coffee shop gift card" disabled value="${escapeHtml(state.signupFormDraft.quickPick3)}">
+                                <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card" disabled value="${escapeHtml(state.signupFormDraft.quickPick3Link)}">
                             </div>
                         </div>
                     </div>
                     <div>
                         <label>SPOUSE NAME *</label>
-                        <input type="text" name="spouseName" placeholder="Spouse's name (no matching together)" autocomplete="off" required>
+                        <input type="text" name="spouseName" placeholder="Spouse's name (no matching together)" autocomplete="off" required value="${escapeHtml(state.signupFormDraft.spouseName)}">
                     </div>
                     <button type="submit">SIGN ME UP! 🎅</button>
                 </form>
