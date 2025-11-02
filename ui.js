@@ -14,6 +14,7 @@ import {
 
 // Tries this many shuffles before declaring the constraints impossible.
 const MAX_ASSIGNMENT_ATTEMPTS = 400;
+const MIN_SIGNUP_SPIN_MS = 900;
 
 // Normalizes participant names so comparisons are case-insensitive.
 function normalizeName(name) {
@@ -250,21 +251,26 @@ function showMessage(message, type) {
 
 // Places a message above the form and ensures mobile users see it.
 function setSignupMessage(message, type = 'info', options = {}) {
+    state.signupMessage = {
+        text: message || '',
+        type: message ? type : 'info'
+    };
     const container = document.getElementById('signupMessage');
-    if (!container) return;
-    container.innerHTML = showMessage(message, type);
-    const focusSelector = options.focusSelector;
-    if (focusSelector) {
-        const context = options.formElement instanceof HTMLElement ? options.formElement : document;
-        const target = context.querySelector(focusSelector);
-        if (target && typeof target.focus === 'function') {
-            setTimeout(() => target.focus({ preventScroll: true }), 50);
+    if (container) {
+        container.innerHTML = message ? showMessage(message, type) : '';
+        const focusSelector = options.focusSelector;
+        if (focusSelector) {
+            const context = options.formElement instanceof HTMLElement ? options.formElement : document;
+            const target = context.querySelector(focusSelector);
+            if (target && typeof target.focus === 'function') {
+                setTimeout(() => target.focus({ preventScroll: true }), 50);
+            }
         }
-    }
-    if (options.scroll !== false) {
-        requestAnimationFrame(() => {
-            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
+        if (options.scroll !== false && message) {
+            requestAnimationFrame(() => {
+                container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        }
     }
 }
 
@@ -375,7 +381,9 @@ async function handleSignup(event) {
     event.preventDefault();
     const form = event.target;
     if (state.signupInFlight) return;
+    setSignupMessage('', 'info', { scroll: false });
     state.signupInFlight = true;
+    const submissionStartedAt = Date.now();
     render();
 
     const formData = new FormData(form);
@@ -393,6 +401,7 @@ async function handleSignup(event) {
     if (typeof navigator !== 'undefined' && navigator && 'onLine' in navigator && !navigator.onLine) {
         setSignupMessage('Looks like you\'re offline. Reconnect to the internet, then try signing up again.', 'error');
         state.signupInFlight = false;
+        render();
         return;
     }
 
@@ -468,10 +477,15 @@ async function handleSignup(event) {
     }
 
     try {
+        const elapsed = Date.now() - submissionStartedAt;
+        if (elapsed < MIN_SIGNUP_SPIN_MS) {
+            await new Promise(resolve => setTimeout(resolve, MIN_SIGNUP_SPIN_MS - elapsed));
+        }
         form.reset();
         toggleQuickPicks(false);
         state.signupComplete = true;
         state.lastSignupName = name;
+        state.signupMessage = { text: '', type: 'info' };
         state.signupInFlight = false;
         render();
         triggerCelebration();
@@ -742,18 +756,14 @@ function render() {
     if (!content) return;
 
     if (state.view === 'signup') {
+        const messageHtml = `<div id="signupMessage" class="message-container" aria-live="polite" aria-atomic="true">${state.signupMessage.text ? showMessage(state.signupMessage.text, state.signupMessage.type) : ''}</div>`;
+
+        let shellClass = 'signup-shell card';
+        let shellContent = '';
         if (state.signupInFlight) {
-            content.innerHTML = `
-                <div id="signupFormTop"></div>
-                <div class="countdown-box" id="countdownBox">Loading countdown...</div>
-                <div class="progress-grid">
-                    <div class="progress-bar" id="progressBar">
-                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
-                        <span id="progressLabel"></span>
-                    </div>
-                    <p class="progress-text" id="progressText"></p>
-                </div>
-                <div class="signup-loading card">
+            shellClass += ' is-loading';
+            shellContent = `
+                <div class="signup-loading">
                     <div class="loading-ornament">
                         <span class="loader-ring"></span>
                         <span class="loader-bauble">🎄</span>
@@ -763,18 +773,10 @@ function render() {
                 </div>
             `;
         } else if (state.signupComplete) {
+            shellClass += ' is-complete';
             const celebrant = escapeHtml(state.lastSignupName || 'Secret Santa friend');
-            content.innerHTML = `
-                <div id="signupFormTop"></div>
-                <div class="countdown-box" id="countdownBox">Loading countdown...</div>
-                <div class="progress-grid">
-                    <div class="progress-bar" id="progressBar">
-                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
-                        <span id="progressLabel"></span>
-                    </div>
-                    <p class="progress-text" id="progressText"></p>
-                </div>
-                <div class="signup-success card">
+            shellContent = `
+                <div class="signup-success">
                     <h2>YOU'RE ON THE NICE LIST!</h2>
                     <p class="success-lead">Thanks, ${celebrant}! Your wish list is tucked safely into Santa's machine.</p>
                     <p class="helper-text success-subtext">We’ll email you once the match-up goes out. Sit tight, sip some cocoa, and get ready to play Santa.</p>
@@ -782,18 +784,9 @@ function render() {
                 </div>
             `;
         } else {
-            content.innerHTML = `
-                <div id="signupFormTop"></div>
-                <div class="countdown-box" id="countdownBox">Loading countdown...</div>
-                <div class="progress-grid">
-                    <div class="progress-bar" id="progressBar">
-                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
-                        <span id="progressLabel"></span>
-                    </div>
-                    <p class="progress-text" id="progressText"></p>
-                </div>
+            shellClass += ' is-form';
+            shellContent = `
                 <p class="intro-text">Fill this out once and we’ll take care of the rest—share who you are, what you love, and we’ll handle the match-up magic.</p>
-                <div id="signupMessage" class="message-container" aria-live="polite" aria-atomic="true"></div>
                 <form id="signupForm" onsubmit="handleSignup(event); return false;">
                     <div>
                         <label>YOUR FIRST NAME *</label>
@@ -836,7 +829,34 @@ function render() {
                     <button type="submit">SIGN ME UP! 🎅</button>
                 </form>
             `;
+        }
+
+        content.innerHTML = `
+            <div id="signupFormTop"></div>
+            <div class="countdown-box" id="countdownBox">Loading countdown...</div>
+            <div class="progress-grid">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                    <span id="progressLabel"></span>
+                </div>
+                <p class="progress-text" id="progressText"></p>
+            </div>
+            ${messageHtml}
+            <div class="${shellClass}">
+                ${shellContent}
+            </div>
+        `;
+
+        if (!state.signupInFlight && !state.signupComplete) {
             toggleQuickPicks(false);
+            if (state.signupMessage.text) {
+                const messageNode = document.getElementById('signupMessage');
+                if (messageNode) {
+                    requestAnimationFrame(() => {
+                        messageNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                }
+            }
         }
     } else if (!state.isAdminAuthenticated) {
         state.view = 'admin-login';

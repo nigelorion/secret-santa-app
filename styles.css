@@ -627,10 +627,7 @@ button:active {
 
 .signup-success {
     text-align: center;
-    margin-top: 18px;
-    border-radius: 16px;
-    background: rgba(15, 36, 28, 0.85);
-    border: 3px solid rgba(245, 214, 123, 0.55);
+    padding: 12px 0;
 }
 
 .signup-success h2 {
@@ -659,13 +656,23 @@ button:active {
     animation: float 4s ease-in-out infinite;
 }
 
+
 .signup-loading {
     text-align: center;
+    padding: 24px 0;
+}
+
+.signup-shell {
     margin-top: 18px;
-    border-radius: 16px;
-    background: rgba(15, 36, 28, 0.85);
-    border: 3px solid rgba(245, 214, 123, 0.45);
-    padding: 32px;
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+}
+
+.signup-shell.is-form {
+    justify-content: flex-start;
 }
 
 .loading-ornament {
