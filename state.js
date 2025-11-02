@@ -26,6 +26,8 @@ const state = {
     lastSignupName: '',
     signupInFlight: false,
     signupMessage: { text: '', type: 'info' },
+    participantCount: null,
+    participantCountKnown: true,
     config: {
         historicalPairings: { year1: '', year2: '' },
         emailConfig: { serviceId: '', templateId: '', publicKey: '' }
@@ -119,6 +121,8 @@ async function clearAllParticipants() {
     state.lastSignupName = '';
     state.signupInFlight = false;
     state.signupMessage = { text: '', type: 'info' };
+    state.participantCount = null;
+    state.participantCountKnown = true;
     return true;
 }
 
@@ -150,6 +154,8 @@ function setAdminAuth(user, claims = {}) {
         state.lastSignupName = '';
         state.signupInFlight = false;
         state.signupMessage = { text: '', type: 'info' };
+        state.participantCount = null;
+        state.participantCountKnown = true;
     }
 }
 

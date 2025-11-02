@@ -277,20 +277,28 @@ function setSignupMessage(message, type = 'info', options = {}) {
 // Updates progress meters and labels on both the public and admin views.
 function updateProgressBar() {
     const total = TOTAL_PARTICIPANTS_TARGET || 1;
-    const signed = state.participants.length;
+    const countKnown = state.participantCountKnown && typeof state.participantCount === 'number';
+    const signed = countKnown ? state.participantCount : state.participants.length;
     const percentBase = total ? Math.min(signed, total) : signed;
     const percent = Math.min(100, total ? (percentBase / total) * 100 : 100);
     const remaining = Math.max(0, total - signed);
-    const primaryLabel = remaining > 0
-        ? `${signed}/${total} signed up • ${remaining} to go`
-        : `${signed}/${total} signed up • Everyone's in!`;
+    const signedLabel = countKnown ? `${signed}/${total}` : `?/${total}`;
+    const primaryLabel = countKnown
+        ? (remaining > 0
+            ? `${signedLabel} signed up • ${remaining} to go`
+            : `${signedLabel} signed up • Everyone's in!`)
+        : `${signedLabel} signed up • Ask the organizer for the latest count`;
 
     const fill = document.getElementById('progressFill');
     const label = document.getElementById('progressLabel');
     const text = document.getElementById('progressText');
     if (fill) fill.style.width = `${percent}%`;
     if (label) label.textContent = primaryLabel;
-    if (text) text.textContent = `${signed} of ${total} have already shared their wish lists`;
+    if (text) {
+        text.textContent = countKnown
+            ? `${signed} of ${total} have already shared their wish lists`
+            : `Progress is hidden right now — reach out to the organizer for an update`;
+    }
 
     const adminFill = document.getElementById('adminProgressFill');
     const adminLabel = document.getElementById('adminProgressLabel');
@@ -298,12 +306,14 @@ function updateProgressBar() {
     if (adminFill) adminFill.style.width = `${percent}%`;
     if (adminLabel) {
         const adminTextContent = remaining > 0
-            ? `${signed}/${total} signed up (${remaining} left)`
-            : `${signed}/${total} signed up (All set)`;
+            ? `${signedLabel} signed up (${remaining} left)`
+            : `${signedLabel} signed up (All set)`;
         adminLabel.textContent = adminTextContent;
     }
     if (adminText) {
-        adminText.textContent = `${signed} of ${total} have submitted their wish lists`;
+        adminText.textContent = countKnown
+            ? `${signed} of ${total} have submitted their wish lists`
+            : `Progress unavailable until you fetch it as admin`;
     }
 }
 
@@ -397,6 +407,7 @@ async function handleSignup(event) {
     const quickPick1Link = (formData.get('quickPick1Link') || '').trim();
     const quickPick2Link = (formData.get('quickPick2Link') || '').trim();
     const quickPick3Link = (formData.get('quickPick3Link') || '').trim();
+    const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
     if (typeof navigator !== 'undefined' && navigator && 'onLine' in navigator && !navigator.onLine) {
         setSignupMessage('Looks like you\'re offline. Reconnect to the internet, then try signing up again.', 'error');
@@ -408,6 +419,8 @@ async function handleSignup(event) {
     try {
         const snapshot = await getCountFromServer(collection(db, 'participants'));
         const currentCount = snapshot.data().count || 0;
+        state.participantCount = currentCount;
+        state.participantCountKnown = true;
         if (currentCount >= TOTAL_PARTICIPANTS_TARGET) {
             setSignupMessage('Sign-ups are full this year. If you need to update your info, contact the organizer.', 'error');
             state.signupInFlight = false;
@@ -416,6 +429,9 @@ async function handleSignup(event) {
         }
     } catch (error) {
         console.error('Participant count check failed:', error);
+        if (error?.code === 'permission-denied') {
+            state.participantCountKnown = false;
+        }
     }
 
     const requiredMissing = [];
@@ -426,6 +442,16 @@ async function handleSignup(event) {
     if (requiredMissing.length) {
         setSignupMessage(`Please fill out ${requiredMissing.join(', ')} before signing up.`, 'error', {
             focusSelector: !name ? 'input[name="name"]' : !email ? 'input[name="email"]' : 'input[name="spouseName"]',
+            formElement: form
+        });
+        state.signupInFlight = false;
+        render();
+        return;
+    }
+
+    if (!emailPattern.test(email)) {
+        setSignupMessage('Please enter a complete email address (example: name@example.com).', 'error', {
+            focusSelector: 'input[name="email"]',
             formElement: form
         });
         state.signupInFlight = false;
@@ -491,6 +517,12 @@ async function handleSignup(event) {
         toggleQuickPicks(false);
         state.signupComplete = true;
         state.lastSignupName = name;
+        if (typeof state.participantCount === 'number') {
+            state.participantCount += 1;
+        } else {
+            state.participantCount = (state.participantCount ?? 0) + 1;
+        }
+        state.participantCountKnown = true;
         state.signupMessage = { text: '', type: 'info' };
         state.signupInFlight = false;
         render();
