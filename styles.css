@@ -773,8 +773,11 @@ button:active {
     }
 
     .header-sleigh {
-        max-width: 220px;
-        height: 40px;
+        max-width: none;
+        width: calc(100% + 32px);
+        height: 44px;
+        margin-left: -16px;
+        margin-right: -16px;
     }
 
     .quick-actions {
@@ -819,8 +822,11 @@ button:active {
     }
 
     .header-sleigh {
-        max-width: 200px;
-        height: 36px;
+        max-width: none;
+        width: calc(100% + 32px);
+        height: 42px;
+        margin-left: -16px;
+        margin-right: -16px;
     }
 
     .cassette-row {
@@ -833,7 +839,7 @@ button:active {
     }
 
     textarea {
-        min-height: 140px;
+        min-height: 180px;
     }
 
     .warning-text {
