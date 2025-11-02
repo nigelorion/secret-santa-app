@@ -878,11 +878,11 @@ function render() {
                 <form id="signupForm" onsubmit="handleSignup(event); return false;">
                     <div>
                         <label>YOUR FIRST NAME *</label>
-                        <input type="text" name="name" placeholder="FIRST NAME ONLY" autocomplete="given-name" required value="${escapeHtml(state.signupFormDraft.name)}">
+                        <input type="text" name="name" placeholder="e.g. - Santa" autocomplete="given-name" required value="${escapeHtml(state.signupFormDraft.name)}">
                     </div>
                     <div>
                         <label>YOUR EMAIL *</label>
-                        <input type="email" name="email" placeholder="ENTER EMAIL" autocomplete="email" required value="${escapeHtml(state.signupFormDraft.email)}">
+                        <input type="email" name="email" placeholder="e.g. - santa@gmail.com" autocomplete="email" required value="${escapeHtml(state.signupFormDraft.email)}">
                     </div>
                     <div>
                         <label>WISH LIST LETTER</label>
@@ -895,24 +895,24 @@ function render() {
                         <div style="display:grid; gap:12px;">
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 1 TITLE</label>
-                                <input type="text" name="quickPick1" placeholder="Example: Cozy flannel pajamas" disabled value="${escapeHtml(state.signupFormDraft.quickPick1)}">
+                                <input type="text" name="quickPick1" placeholder="e.g. - Cozy flannel pajamas" disabled value="${escapeHtml(state.signupFormDraft.quickPick1)}">
                                 <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set" disabled value="${escapeHtml(state.signupFormDraft.quickPick1Link)}">
                             </div>
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 2 TITLE</label>
-                                <input type="text" name="quickPick2" placeholder="Example: Cookbook from my wish list" disabled value="${escapeHtml(state.signupFormDraft.quickPick2)}">
+                                <input type="text" name="quickPick2" placeholder="e.g. - Cookbook from my wish list" disabled value="${escapeHtml(state.signupFormDraft.quickPick2)}">
                                 <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook" disabled value="${escapeHtml(state.signupFormDraft.quickPick2Link)}">
                             </div>
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 3 TITLE</label>
-                                <input type="text" name="quickPick3" placeholder="Example: Local coffee shop gift card" disabled value="${escapeHtml(state.signupFormDraft.quickPick3)}">
+                                <input type="text" name="quickPick3" placeholder="e.g. - Local coffee shop gift card" disabled value="${escapeHtml(state.signupFormDraft.quickPick3)}">
                                 <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card" disabled value="${escapeHtml(state.signupFormDraft.quickPick3Link)}">
                             </div>
                         </div>
                     </div>
                     <div>
                         <label>SPOUSE NAME *</label>
-                        <input type="text" name="spouseName" placeholder="Spouse's name (no matching together)" autocomplete="off" required value="${escapeHtml(state.signupFormDraft.spouseName)}">
+                        <input type="text" name="spouseName" placeholder="So you aren't matched!" autocomplete="off" required value="${escapeHtml(state.signupFormDraft.spouseName)}">
                     </div>
                     <button type="submit">SIGN ME UP! 🎅</button>
                 </form>
