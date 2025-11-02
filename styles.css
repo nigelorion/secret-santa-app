@@ -612,6 +612,21 @@ button:active {
     border: 1px solid rgba(245, 214, 123, 0.25);
 }
 
+.preview-hidden {
+    text-align: center;
+    font-size: 13px;
+    color: rgba(245, 214, 123, 0.75);
+    margin-top: 8px;
+}
+
+.preview-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
 /* Pixel trees decoration */
 .trees {
     position: fixed;

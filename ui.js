@@ -10,6 +10,155 @@ import {
     setAdminAuth
 } from './state.js';
 
+// ===== Secret Santa assignment helpers =====
+
+// Tries this many shuffles before declaring the constraints impossible.
+const MAX_ASSIGNMENT_ATTEMPTS = 400;
+
+// Normalizes participant names so comparisons are case-insensitive.
+function normalizeName(name) {
+    return (name || '').toString().trim().toLowerCase();
+}
+
+// Fisher–Yates shuffle used to randomize giver ordering.
+function shuffleInPlace(list) {
+    for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+}
+
+// Builds a lookup of prior-year matches to avoid repeats.
+function buildHistoricalMap(historicalPairs) {
+    const map = new Map();
+    historicalPairs.forEach(pair => {
+        const giverKey = normalizeName(pair.giver);
+        const receiverKey = normalizeName(pair.receiver);
+        if (!giverKey || !receiverKey) return;
+        if (!map.has(giverKey)) {
+            map.set(giverKey, new Set());
+        }
+        map.get(giverKey).add(receiverKey);
+    });
+    return map;
+}
+
+// Creates lightweight participant entries with precomputed values.
+function buildParticipantContext(participants) {
+    return participants
+        .map(raw => ({
+            raw,
+            lowerName: normalizeName(raw.name),
+            spouseLower: normalizeName(raw.spouseName)
+        }))
+        .filter(entry => !!entry.lowerName);
+}
+
+// Prepares the disallowed receivers for each giver (self, spouse, recent draws).
+function buildDisallowedMap(context, historicalMap) {
+    const disallowedMap = new Map();
+    context.forEach(({ lowerName, spouseLower }) => {
+        const disallowed = new Set([lowerName]);
+        if (spouseLower) disallowed.add(spouseLower);
+        const historical = historicalMap.get(lowerName);
+        if (historical) {
+            historical.forEach(name => disallowed.add(name));
+        }
+        disallowedMap.set(lowerName, disallowed);
+    });
+    return disallowedMap;
+}
+
+// Attempts a single backtracking pass to produce valid assignments.
+function attemptAssignmentBuild(context, disallowedMap) {
+    const optionsByGiver = new Map();
+    context.forEach(giver => {
+        const disallowed = disallowedMap.get(giver.lowerName) || new Set();
+        const allowed = context.filter(receiver => !disallowed.has(receiver.lowerName));
+        optionsByGiver.set(giver.lowerName, allowed);
+    });
+
+    const hasImpossibleGiver = [...optionsByGiver.values()].some(options => options.length === 0);
+    if (hasImpossibleGiver) {
+        return null;
+    }
+
+    const giverOrder = [...context];
+    shuffleInPlace(giverOrder);
+    giverOrder.sort((a, b) => {
+        const aOptions = optionsByGiver.get(a.lowerName)?.length ?? 0;
+        const bOptions = optionsByGiver.get(b.lowerName)?.length ?? 0;
+        if (aOptions === bOptions) {
+            return Math.random() - 0.5;
+        }
+        return aOptions - bOptions;
+    });
+
+    const usedReceivers = new Set();
+    const currentAssignments = new Map();
+    const proposed = [];
+
+    function backtrack(index) {
+        if (index === giverOrder.length) {
+            return true;
+        }
+
+        const giver = giverOrder[index];
+        const baseOptions = optionsByGiver.get(giver.lowerName) || [];
+        const choices = baseOptions.filter(receiver => {
+            if (usedReceivers.has(receiver.lowerName)) return false;
+            if (currentAssignments.get(receiver.lowerName) === giver.lowerName) return false;
+            return true;
+        });
+
+        if (choices.length === 0) {
+            return false;
+        }
+
+        shuffleInPlace(choices);
+
+        for (const receiver of choices) {
+            usedReceivers.add(receiver.lowerName);
+            currentAssignments.set(giver.lowerName, receiver.lowerName);
+            proposed.push({ giver, receiver });
+
+            if (backtrack(index + 1)) {
+                return true;
+            }
+
+            proposed.pop();
+            currentAssignments.delete(giver.lowerName);
+            usedReceivers.delete(receiver.lowerName);
+        }
+
+        return false;
+    }
+
+    if (!backtrack(0)) {
+        return null;
+    }
+
+    return proposed.map(pair => ({
+        giver: pair.giver.raw,
+        receiver: pair.receiver.raw
+    }));
+}
+
+// Repeats the backtracking attempt until a valid arrangement is found or we give up.
+function generateAssignments(context, disallowedMap) {
+    for (let attempt = 0; attempt < MAX_ASSIGNMENT_ATTEMPTS; attempt++) {
+        const proposed = attemptAssignmentBuild(context, disallowedMap);
+        if (proposed) {
+            return proposed;
+        }
+    }
+    return null;
+}
+
+// ===== General UI helpers =====
+
+// Keeps focused fields visible on small screens when the keyboard opens.
 function handleFocusScroll(event) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
@@ -20,6 +169,7 @@ function handleFocusScroll(event) {
     }, 120);
 }
 
+// Adds a temporary snow-fall celebration after a successful signup.
 function triggerCelebration() {
     const overlay = document.createElement('div');
     overlay.className = 'celebration-overlay';
@@ -38,6 +188,7 @@ function triggerCelebration() {
     setTimeout(() => overlay.remove(), 6500);
 }
 
+// Returns days remaining until Christmas (or 0 if it's here).
 function getDaysUntilChristmas() {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -46,14 +197,16 @@ function getDaysUntilChristmas() {
         christmas.setFullYear(currentYear + 1);
     }
     const diff = christmas - now;
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
+// Wraps message text with a class for consistent styling.
 function showMessage(message, type) {
     const typeClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
     return `<div class="message ${typeClass}">${message}</div>`;
 }
 
+// Updates progress meters and labels on both the public and admin views.
 function updateProgressBar() {
     const total = TOTAL_PARTICIPANTS_TARGET || 1;
     const signed = state.participants.length;
@@ -86,6 +239,7 @@ function updateProgressBar() {
     }
 }
 
+// Refreshes the countdown copy everywhere it appears.
 function updateCountdown() {
     const days = getDaysUntilChristmas();
     let message = '🎄 Christmas is here!';
@@ -104,6 +258,7 @@ function updateCountdown() {
     if (adminCountdown) adminCountdown.textContent = message;
 }
 
+// Expands/collapses the optional quick-pick inputs and disables them when hidden.
 function toggleQuickPicks(forceOpen) {
     const section = document.getElementById('quickPicksSection');
     const toggleButton = document.getElementById('quickPicksToggle');
@@ -116,6 +271,7 @@ function toggleQuickPicks(forceOpen) {
     inputs.forEach(input => { input.disabled = !shouldOpen; });
 }
 
+// Scrolls the user to the signup form (and focuses the name field) from anywhere.
 function scrollToSignup() {
     const navigate = () => {
         const anchor = document.getElementById('signupFormTop');
@@ -140,6 +296,7 @@ function scrollToSignup() {
     }
 }
 
+// Switches between the main signup view and admin subviews.
 function showView(view) {
     state.view = view;
     const adminTab = document.getElementById('adminTab');
@@ -149,6 +306,9 @@ function showView(view) {
     render();
 }
 
+// ===== Signup flow =====
+
+// Validates the signup form, saves the participant, and gives user feedback.
 async function handleSignup(event) {
     event.preventDefault();
     const form = event.target;
@@ -227,6 +387,9 @@ async function handleSignup(event) {
     }
 }
 
+// ===== Admin authentication =====
+
+// Handles the email/password admin sign-in flow.
 async function handleAdminLogin(event) {
     event.preventDefault();
     const form = event.target;
@@ -258,6 +421,7 @@ async function handleAdminLogin(event) {
     }
 }
 
+// Signs the admin out and clears their session state.
 async function handleAdminLogout() {
     try {
         await signOut(auth);
@@ -270,6 +434,9 @@ function parseAssignments() {
     return parseHistoricalPairings();
 }
 
+// ===== Admin actions (emails, assignments, cleanup) =====
+
+// Sends out EmailJS notifications for a finalized assignment set.
 async function sendEmails(assignments) {
     try {
         emailjs.init(state.config.emailConfig.publicKey);
@@ -328,6 +495,7 @@ async function sendEmails(assignments) {
     }
 }
 
+// Generates a spoiler-free assignment preview that satisfies all constraints.
 async function runSecretSanta() {
     if (!state.isAdminAuthenticated) {
         document.getElementById('adminMessage').innerHTML = showMessage('Admin sign-in required to run assignments.', 'error');
@@ -339,147 +507,28 @@ async function runSecretSanta() {
     }
 
     const historicalPairs = parseAssignments();
-    const spouseMap = {};
-    state.participants.forEach(p => {
-        if (p.spouseName) {
-            spouseMap[p.name] = p.spouseName;
-            spouseMap[p.spouseName] = p.name;
-        }
-    });
+    const participantContext = buildParticipantContext(state.participants);
 
-    const MAX_ATTEMPTS = 400;
-    let assignments = null;
-
-    const normalizedParticipants = state.participants
-        .map(p => ({
-            raw: p,
-            lowerName: (p.name || '').trim().toLowerCase()
-        }))
-        .filter(p => p.lowerName);
-
-    if (normalizedParticipants.length !== state.participants.length) {
+    if (participantContext.length !== state.participants.length) {
         document.getElementById('adminMessage').innerHTML = showMessage('All participants need a name before assignments can be created.', 'error');
         return;
     }
 
-    const historicalMap = new Map();
-    historicalPairs.forEach(pair => {
-        const giverKey = (pair.giver || '').trim().toLowerCase();
-        const receiverKey = (pair.receiver || '').trim().toLowerCase();
-        if (!giverKey || !receiverKey) return;
-        if (!historicalMap.has(giverKey)) {
-            historicalMap.set(giverKey, new Set());
-        }
-        historicalMap.get(giverKey).add(receiverKey);
-    });
-
-    const disallowedMap = new Map();
-    normalizedParticipants.forEach(({ raw, lowerName }) => {
-        const disallowed = new Set();
-        disallowed.add(lowerName);
-        const spouse = spouseMap[raw.name];
-        if (spouse) {
-            disallowed.add(spouse.trim().toLowerCase());
-        }
-        const historicalReceivers = historicalMap.get(lowerName);
-        if (historicalReceivers) {
-            historicalReceivers.forEach(name => disallowed.add(name));
-        }
-        disallowedMap.set(lowerName, disallowed);
-    });
-
-    function shuffleInPlace(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
-
-    function buildAssignmentAttempt() {
-        const baseOptions = new Map();
-        normalizedParticipants.forEach(giver => {
-            const disallowed = disallowedMap.get(giver.lowerName) || new Set();
-            const allowed = normalizedParticipants.filter(receiver => !disallowed.has(receiver.lowerName));
-            baseOptions.set(giver.lowerName, allowed);
-        });
-
-        const hasImpossibleGiver = [...baseOptions.values()].some(options => options.length === 0);
-        if (hasImpossibleGiver) {
-            return null;
-        }
-
-        const giverOrder = [...normalizedParticipants];
-        shuffleInPlace(giverOrder);
-        giverOrder.sort((a, b) => {
-            const aOptions = baseOptions.get(a.lowerName).length;
-            const bOptions = baseOptions.get(b.lowerName).length;
-            if (aOptions === bOptions) {
-                return Math.random() - 0.5;
-            }
-            return aOptions - bOptions;
-        });
-
-        const usedReceivers = new Set();
-        const giverAssignments = new Map();
-        const proposed = [];
-
-        function backtrack(index) {
-            if (index === giverOrder.length) {
-                return true;
-            }
-
-            const giver = giverOrder[index];
-            const choices = baseOptions.get(giver.lowerName)
-                .filter(receiver => {
-                    if (usedReceivers.has(receiver.lowerName)) return false;
-                    const receiverPrevious = giverAssignments.get(receiver.lowerName);
-                    if (receiverPrevious && receiverPrevious === giver.lowerName) return false;
-                    return true;
-                });
-
-            if (choices.length === 0) {
-                return false;
-            }
-
-            shuffleInPlace(choices);
-
-            for (const receiver of choices) {
-                usedReceivers.add(receiver.lowerName);
-                giverAssignments.set(giver.lowerName, receiver.lowerName);
-                proposed.push({ giver: giver.raw, receiver: receiver.raw });
-
-                if (backtrack(index + 1)) {
-                    return true;
-                }
-
-                proposed.pop();
-                giverAssignments.delete(giver.lowerName);
-                usedReceivers.delete(receiver.lowerName);
-            }
-
-            return false;
-        }
-
-        return backtrack(0) ? proposed : null;
-    }
-
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        const proposed = buildAssignmentAttempt();
-        if (proposed) {
-            assignments = proposed;
-            break;
-        }
-    }
+    const historicalMap = buildHistoricalMap(historicalPairs);
+    const disallowedMap = buildDisallowedMap(participantContext, historicalMap);
+    const assignments = generateAssignments(participantContext, disallowedMap);
 
     if (!assignments) {
         document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
         state.pendingAssignments = null;
+        state.previewAssignmentsVisible = false;
         render();
         return;
     }
 
     state.pendingAssignments = assignments;
+    state.previewAssignmentsVisible = false;
+
     console.table(assignments.map(pair => ({
         Giver: pair.giver.name,
         'Giver Email': pair.giver.email,
@@ -492,12 +541,13 @@ async function runSecretSanta() {
     if (adminMessage) {
         const emailConfigReady = state.config.emailConfig.serviceId && state.config.emailConfig.templateId && state.config.emailConfig.publicKey;
         const hint = emailConfigReady
-            ? 'Review the preview below, then click SEND EMAILS when you\'re ready.'
+            ? 'Click "Reveal matches" if you want to double-check, or go straight to "Send Emails" when you\'re ready.'
             : 'Preview ready. Enter your EmailJS settings before sending.';
         adminMessage.innerHTML = showMessage(`Assignments generated! ${hint}`, emailConfigReady ? 'info' : 'error');
     }
 }
 
+// Triggers the actual EmailJS send after the admin reviews the preview.
 async function sendPendingAssignments() {
     if (!state.isAdminAuthenticated) {
         document.getElementById('adminMessage').innerHTML = showMessage('Admin sign-in required to send assignments.', 'error');
@@ -523,6 +573,7 @@ async function sendPendingAssignments() {
     await sendEmails(state.pendingAssignments);
     const messageContent = document.getElementById('adminMessage')?.innerHTML || '';
     state.pendingAssignments = null;
+    state.previewAssignmentsVisible = false;
     render();
     const messageContainer = document.getElementById('adminMessage');
     if (messageContainer && messageContent) {
@@ -530,6 +581,21 @@ async function sendPendingAssignments() {
     }
 }
 
+// Toggles whether the admin panel reveals or hides the pending matches.
+function setAssignmentPreviewVisibility(visible) {
+    if (!state.pendingAssignments || state.pendingAssignments.length === 0) {
+        return;
+    }
+    const messageContent = document.getElementById('adminMessage')?.innerHTML || '';
+    state.previewAssignmentsVisible = !!visible;
+    render();
+    const messageContainer = document.getElementById('adminMessage');
+    if (messageContainer && messageContent) {
+        messageContainer.innerHTML = messageContent;
+    }
+}
+
+// Removes every signup (handy for testing cycles).
 async function clearAllParticipants() {
     if (!state.isAdminAuthenticated) {
         const messageContainer = document.getElementById('adminMessage');
@@ -565,6 +631,7 @@ async function clearAllParticipants() {
     }
 }
 
+// Persists config edits but only when the admin is signed in.
 function updateConfig(field, value) {
     if (!state.isAdminAuthenticated) {
         const messageContainer = document.getElementById('adminMessage');
@@ -576,6 +643,9 @@ function updateConfig(field, value) {
     return updateConfigState(field, value);
 }
 
+// ===== Rendering and bootstrapping =====
+
+// Draws whichever view (signup/admin) matches the current state.
 function render() {
     const content = document.getElementById('content');
     if (!content) return;
@@ -681,6 +751,9 @@ function render() {
                 `;
             }).join('');
 
+        const hasPendingAssignments = Array.isArray(state.pendingAssignments) && state.pendingAssignments.length > 0;
+        const previewVisible = state.previewAssignmentsVisible && hasPendingAssignments;
+
         content.innerHTML = `
             <h2>ADMIN PANEL</h2>
             <div class="countdown-box" id="adminCountdown">Loading countdown...</div>
@@ -740,14 +813,29 @@ function render() {
                 <p class="helper-text" style="margin-bottom: 15px;">STEP 1: GENERATE A PREVIEW • STEP 2: SEND EMAILS</p>
                 <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:12px;">
                     <button type="button" class="button-primary" onclick="runSecretSanta()">🎲 GENERATE PREVIEW</button>
-                    <button type="button" class="button-secondary" onclick="sendPendingAssignments()" ${state.pendingAssignments && state.pendingAssignments.length ? '' : 'disabled'}>📧 SEND EMAILS</button>
+                    <button type="button" class="button-secondary" onclick="sendPendingAssignments()" ${hasPendingAssignments ? '' : 'disabled'}>📧 SEND EMAILS</button>
                 </div>
-                ${state.pendingAssignments && state.pendingAssignments.length ? `
+                ${hasPendingAssignments ? `
                     <div class="preview-box">
-                        <p class="helper-text" style="margin-bottom:10px;">Preview ready! Emails won't send until you click SEND EMAILS.</p>
-                        <ul class="preview-list">
-                            ${state.pendingAssignments.map(pair => `<li>${escapeHtml(pair.giver.name)} → ${escapeHtml(pair.receiver.name)}</li>`).join('')}
-                        </ul>
+                        <p class="helper-text" style="margin-bottom:10px;">
+                            ${previewVisible
+                                ? 'Preview ready! Emails won\'t send until you click SEND EMAILS.'
+                                : 'Preview ready! Matches stay hidden so you don\'t spoil the surprise. They\'re also logged in the console.'}
+                        </p>
+                        ${previewVisible
+                            ? `
+                                <ul class="preview-list">
+                                    ${state.pendingAssignments.map(pair => `<li>${escapeHtml(pair.giver.name)} → ${escapeHtml(pair.receiver.name)}</li>`).join('')}
+                                </ul>
+                            `
+                            : `
+                                <p class="preview-hidden">Matches are hidden. Click "Reveal matches" if you need to peek.</p>
+                            `}
+                        <div class="preview-actions">
+                            ${previewVisible
+                                ? `<button type="button" class="button-secondary" onclick="setAssignmentPreviewVisibility(false)">🙈 Hide matches</button>`
+                                : `<button type="button" class="button-secondary" onclick="setAssignmentPreviewVisibility(true)">👀 Reveal matches</button>`}
+                        </div>
                     </div>
                 ` : `
                     <p class="helper-text" style="text-align:center;">Click GENERATE PREVIEW to see this year's matches before emailing.</p>
@@ -757,9 +845,10 @@ function render() {
     }
 
     updateProgressBar();
-    updateCountdown();
+        updateCountdown();
 }
 
+// Escapes user-provided values before injecting into HTML.
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
     return String(text)
@@ -770,6 +859,7 @@ function escapeHtml(text) {
         .replace(/'/g, '&#39;');
 }
 
+// Sets up persistent listeners for the static buttons present on every view.
 function setupStaticListeners() {
     const signupButton = document.getElementById('signupButton');
     if (signupButton) {
@@ -781,6 +871,7 @@ function setupStaticListeners() {
     }
 }
 
+// Loads initial data, wires up auth listeners, and kicks off the first render.
 async function initializeUI() {
     document.addEventListener('focusin', handleFocusScroll);
     setupStaticListeners();
@@ -826,6 +917,7 @@ export {
     updateConfig,
     runSecretSanta,
     sendPendingAssignments,
+    setAssignmentPreviewVisibility,
     clearAllParticipants,
     scrollToSignup
 };
