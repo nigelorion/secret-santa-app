@@ -363,6 +363,19 @@ button:active {
     color: #fcefd7;
 }
 
+.message-container {
+    position: sticky;
+    top: 12px;
+    z-index: 5;
+    margin-bottom: 18px;
+    min-height: 0;
+}
+
+.message-container:empty {
+    margin-bottom: 0;
+    position: static;
+}
+
 .intro-text {
     color: #f5d67b;
     font-size: 16px;
@@ -610,6 +623,40 @@ button:active {
     border-radius: 6px;
     background: rgba(31, 77, 58, 0.6);
     border: 1px solid rgba(245, 214, 123, 0.25);
+}
+
+.signup-success {
+    text-align: center;
+    margin-top: 18px;
+    border-radius: 16px;
+    background: rgba(15, 36, 28, 0.85);
+    border: 3px solid rgba(245, 214, 123, 0.55);
+}
+
+.signup-success h2 {
+    font-size: 24px;
+    margin-bottom: 18px;
+    color: #f5d67b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.success-lead {
+    font-size: 18px;
+    line-height: 1.7;
+    margin-bottom: 12px;
+    color: #fcefd7;
+}
+
+.success-subtext {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.success-confetti {
+    font-size: 32px;
+    letter-spacing: 0.4em;
+    animation: float 4s ease-in-out infinite;
 }
 
 .preview-hidden {

@@ -248,6 +248,26 @@ function showMessage(message, type) {
     return `<div class="message ${typeClass}">${message}</div>`;
 }
 
+// Places a message above the form and ensures mobile users see it.
+function setSignupMessage(message, type = 'info', options = {}) {
+    const container = document.getElementById('signupMessage');
+    if (!container) return;
+    container.innerHTML = showMessage(message, type);
+    const focusSelector = options.focusSelector;
+    if (focusSelector) {
+        const context = options.formElement instanceof HTMLElement ? options.formElement : document;
+        const target = context.querySelector(focusSelector);
+        if (target && typeof target.focus === 'function') {
+            setTimeout(() => target.focus({ preventScroll: true }), 50);
+        }
+    }
+    if (options.scroll !== false) {
+        requestAnimationFrame(() => {
+            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    }
+}
+
 // Updates progress meters and labels on both the public and admin views.
 function updateProgressBar() {
     const total = TOTAL_PARTICIPANTS_TARGET || 1;
@@ -367,7 +387,7 @@ async function handleSignup(event) {
     const quickPick3Link = (formData.get('quickPick3Link') || '').trim();
 
     if (typeof navigator !== 'undefined' && navigator && 'onLine' in navigator && !navigator.onLine) {
-        document.getElementById('signupMessage').innerHTML = showMessage('Looks like you\'re offline. Reconnect to the internet, then try signing up again.', 'error');
+        setSignupMessage('Looks like you\'re offline. Reconnect to the internet, then try signing up again.', 'error');
         return;
     }
 
@@ -375,7 +395,7 @@ async function handleSignup(event) {
         const snapshot = await getCountFromServer(collection(db, 'participants'));
         const currentCount = snapshot.data().count || 0;
         if (currentCount >= TOTAL_PARTICIPANTS_TARGET) {
-            document.getElementById('signupMessage').innerHTML = showMessage('Sign-ups are full this year. If you need to update your info, contact the organizer.', 'error');
+            setSignupMessage('Sign-ups are full this year. If you need to update your info, contact the organizer.', 'error');
             return;
         }
     } catch (error) {
@@ -388,12 +408,26 @@ async function handleSignup(event) {
     if (!spouseName) requiredMissing.push('your spouse\'s name');
 
     if (requiredMissing.length) {
-        document.getElementById('signupMessage').innerHTML = showMessage(`Please fill out ${requiredMissing.join(', ')} before signing up.`, 'error');
+        setSignupMessage(`Please fill out ${requiredMissing.join(', ')} before signing up.`, 'error', {
+            focusSelector: !name ? 'input[name="name"]' : !email ? 'input[name="email"]' : 'input[name="spouseName"]',
+            formElement: form
+        });
+        return;
+    }
+
+    if (/\s/.test(name)) {
+        setSignupMessage('First name only, please. We use first names to build the Secret Santa matches.', 'error', {
+            focusSelector: 'input[name="name"]',
+            formElement: form
+        });
         return;
     }
 
     if (state.participants.some(p => p.email?.toLowerCase() === email.toLowerCase() || p.name?.toLowerCase() === name.toLowerCase())) {
-        document.getElementById('signupMessage').innerHTML = showMessage('Oops! You are already signed up this year. If you need to update your info, contact the organizer.', 'error');
+        setSignupMessage('Looks like you\'re already on the list this year. Reach out to the organizer if you need to make a change.', 'error', {
+            focusSelector: 'input[name="email"]',
+            formElement: form
+        });
         return;
     }
 
@@ -412,20 +446,22 @@ async function handleSignup(event) {
         });
     } catch (error) {
         console.error('Signup error (saving participant):', error);
-        document.getElementById('signupMessage').innerHTML = showMessage('We couldn\'t save your info. Check your connection and try again.', 'error');
+        setSignupMessage('We couldn\'t save your info. Check your connection and try again.', 'error', {
+            formElement: form
+        });
         return;
     }
 
     try {
         form.reset();
         toggleQuickPicks(false);
-        updateProgressBar();
-        updateCountdown();
-        document.getElementById('signupMessage').innerHTML = showMessage('🎉 Successfully signed up! You\'ll receive an email once Secret Santa assignments are made.', 'success');
+        state.signupComplete = true;
+        state.lastSignupName = name;
+        render();
         triggerCelebration();
     } catch (uiError) {
         console.error('Signup UI update error:', uiError);
-        document.getElementById('signupMessage').innerHTML = showMessage('You\'re signed up, but we hit a snag updating the page. Refresh to double-check your info.', 'info');
+        setSignupMessage('You\'re signed up, but we hit a snag updating the page. Refresh to double-check your info.', 'info');
     }
 }
 
@@ -688,61 +724,82 @@ function render() {
     if (!content) return;
 
     if (state.view === 'signup') {
-        content.innerHTML = `
-            <div id="signupFormTop"></div>
-            <div class="countdown-box" id="countdownBox">Loading countdown...</div>
-            <div class="progress-grid">
-                <div class="progress-bar" id="progressBar">
-                    <div class="progress-fill" id="progressFill" style="width:0%"></div>
-                    <span id="progressLabel"></span>
+        if (state.signupComplete) {
+            const celebrant = escapeHtml(state.lastSignupName || 'Secret Santa friend');
+            content.innerHTML = `
+                <div id="signupFormTop"></div>
+                <div class="countdown-box" id="countdownBox">Loading countdown...</div>
+                <div class="progress-grid">
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                        <span id="progressLabel"></span>
+                    </div>
+                    <p class="progress-text" id="progressText"></p>
                 </div>
-                <p class="progress-text" id="progressText"></p>
-            </div>
-            <p class="intro-text">Fill this out once and we’ll take care of the rest—share who you are, what you love, and we’ll handle the match-up magic.</p>
-            <div id="signupMessage"></div>
-            <form id="signupForm" onsubmit="handleSignup(event); return false;">
-                <div>
-                    <label>YOUR NAME *</label>
-                    <input type="text" name="name" placeholder="ENTER NAME">
+                <div class="signup-success card">
+                    <h2>YOU'RE ON THE NICE LIST!</h2>
+                    <p class="success-lead">Thanks, ${celebrant}! Your wish list is tucked safely into Santa's machine.</p>
+                    <p class="helper-text success-subtext">We’ll email you once the match-up goes out. Sit tight, sip some cocoa, and get ready to play Santa.</p>
+                    <div class="success-confetti">🎁 ❄️ 🎄 ✨</div>
                 </div>
-                <div>
-                    <label>YOUR EMAIL *</label>
-                    <input type="email" name="email" placeholder="ENTER EMAIL">
+            `;
+        } else {
+            content.innerHTML = `
+                <div id="signupFormTop"></div>
+                <div class="countdown-box" id="countdownBox">Loading countdown...</div>
+                <div class="progress-grid">
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                        <span id="progressLabel"></span>
+                    </div>
+                    <p class="progress-text" id="progressText"></p>
                 </div>
-                <div>
-                    <label>WISH LIST LETTER</label>
-                    <textarea name="wishlist" rows="5" placeholder="Say hi to your Santa, share what you're into this season, and mention any themes or surprises you'd love."></textarea>
-                </div>
-                <button type="button" class="toggle-quick-picks" id="quickPicksToggle" onclick="toggleQuickPicks()">➕ Add quick picks (optional)</button>
-                <div class="section-box quick-picks" id="quickPicksSection">
-                    <h3 style="margin-bottom:12px; color:#f5d67b;">QUICK PICKS</h3>
-                    <p class="helper-text" style="margin-bottom:10px;">Add up to three specific ideas or product links in case your Santa needs a nudge.</p>
-                    <div style="display:grid; gap:12px;">
-                        <div style="display:grid; gap:8px;">
-                            <label style="margin-bottom:0;">ITEM 1 TITLE</label>
-                            <input type="text" name="quickPick1" placeholder="Example: Cozy flannel pajamas" disabled>
-                            <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set" disabled>
-                        </div>
-                        <div style="display:grid; gap:8px;">
-                            <label style="margin-bottom:0;">ITEM 2 TITLE</label>
-                            <input type="text" name="quickPick2" placeholder="Example: Cookbook from my wish list" disabled>
-                            <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook" disabled>
-                        </div>
-                        <div style="display:grid; gap:8px;">
-                            <label style="margin-bottom:0;">ITEM 3 TITLE</label>
-                            <input type="text" name="quickPick3" placeholder="Example: Local coffee shop gift card" disabled>
-                            <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card" disabled>
+                <p class="intro-text">Fill this out once and we’ll take care of the rest—share who you are, what you love, and we’ll handle the match-up magic.</p>
+                <div id="signupMessage" class="message-container" aria-live="polite" aria-atomic="true"></div>
+                <form id="signupForm" onsubmit="handleSignup(event); return false;">
+                    <div>
+                        <label>YOUR FIRST NAME *</label>
+                        <input type="text" name="name" placeholder="FIRST NAME ONLY" autocomplete="given-name" required>
+                    </div>
+                    <div>
+                        <label>YOUR EMAIL *</label>
+                        <input type="email" name="email" placeholder="ENTER EMAIL" autocomplete="email" required>
+                    </div>
+                    <div>
+                        <label>WISH LIST LETTER</label>
+                        <textarea name="wishlist" rows="5" placeholder="Say hi to your Santa, share what you're into this season, and mention any themes or surprises you'd love."></textarea>
+                    </div>
+                    <button type="button" class="toggle-quick-picks" id="quickPicksToggle" onclick="toggleQuickPicks()">➕ Add quick picks (optional)</button>
+                    <div class="section-box quick-picks" id="quickPicksSection">
+                        <h3 style="margin-bottom:12px; color:#f5d67b;">QUICK PICKS</h3>
+                        <p class="helper-text" style="margin-bottom:10px;">Add up to three specific ideas or product links in case your Santa needs a nudge.</p>
+                        <div style="display:grid; gap:12px;">
+                            <div style="display:grid; gap:8px;">
+                                <label style="margin-bottom:0;">ITEM 1 TITLE</label>
+                                <input type="text" name="quickPick1" placeholder="Example: Cozy flannel pajamas" disabled>
+                                <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set" disabled>
+                            </div>
+                            <div style="display:grid; gap:8px;">
+                                <label style="margin-bottom:0;">ITEM 2 TITLE</label>
+                                <input type="text" name="quickPick2" placeholder="Example: Cookbook from my wish list" disabled>
+                                <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook" disabled>
+                            </div>
+                            <div style="display:grid; gap:8px;">
+                                <label style="margin-bottom:0;">ITEM 3 TITLE</label>
+                                <input type="text" name="quickPick3" placeholder="Example: Local coffee shop gift card" disabled>
+                                <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card" disabled>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div>
-                    <label>SPOUSE NAME *</label>
-                    <input type="text" name="spouseName" placeholder="Spouse's name (no matching together)">
-                </div>
-                <button type="submit">SIGN ME UP! 🎅</button>
-            </form>
-        `;
-        toggleQuickPicks(false);
+                    <div>
+                        <label>SPOUSE NAME *</label>
+                        <input type="text" name="spouseName" placeholder="Spouse's name (no matching together)" autocomplete="off" required>
+                    </div>
+                    <button type="submit">SIGN ME UP! 🎅</button>
+                </form>
+            `;
+            toggleQuickPicks(false);
+        }
     } else if (!state.isAdminAuthenticated) {
         state.view = 'admin-login';
         content.innerHTML = `

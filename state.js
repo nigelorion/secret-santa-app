@@ -22,6 +22,8 @@ const state = {
     participants: [],
     pendingAssignments: null,
     previewAssignmentsVisible: false,
+    signupComplete: false,
+    lastSignupName: '',
     config: {
         historicalPairings: { year1: '', year2: '' },
         emailConfig: { serviceId: '', templateId: '', publicKey: '' }
@@ -110,6 +112,8 @@ async function clearAllParticipants() {
     state.participants = [];
     state.pendingAssignments = null;
     state.previewAssignmentsVisible = false;
+    state.signupComplete = false;
+    state.lastSignupName = '';
     return true;
 }
 
@@ -137,6 +141,8 @@ function setAdminAuth(user, claims = {}) {
     if (!isAdmin) {
         state.pendingAssignments = null;
         state.previewAssignmentsVisible = false;
+        state.signupComplete = false;
+        state.lastSignupName = '';
     }
 }
 
