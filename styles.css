@@ -554,6 +554,83 @@ button:active {
     line-height: 1.5;
 }
 
+/* Signup shell styling */
+.signup-shell {
+    margin-top: 22px;
+    padding: 34px 28px;
+    background: linear-gradient(135deg, rgba(17, 44, 33, 0.78), rgba(12, 28, 21, 0.78));
+    border-radius: 22px;
+    border: 1px solid rgba(245, 214, 123, 0.2);
+    box-shadow:
+        0 18px 36px rgba(0, 0, 0, 0.4),
+        inset 0 0 0 1px rgba(164, 233, 198, 0.12);
+    position: relative;
+}
+
+.signup-shell::before,
+.signup-shell::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 24px;
+    pointer-events: none;
+}
+
+.signup-shell::before {
+    border: 1px solid rgba(240, 112, 112, 0.22);
+    filter: blur(1px);
+}
+
+.signup-shell::after {
+    border: 1px dashed rgba(245, 214, 123, 0.26);
+    animation: shell-twinkle 3.6s linear infinite;
+}
+
+@keyframes shell-twinkle {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 0.45; }
+}
+
+.signup-shell.is-loading,
+.signup-shell.is-complete {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 360px;
+}
+
+.signup-shell form {
+    display: grid;
+    gap: 22px;
+}
+
+.signup-shell form input,
+.signup-shell form textarea,
+.signup-shell form button {
+    width: 100%;
+}
+
+.signup-shell form input,
+.signup-shell form textarea {
+    padding: 16px;
+    font-size: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(245, 214, 123, 0.2);
+    background: rgba(10, 26, 19, 0.92);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+.signup-shell form textarea {
+    min-height: 160px;
+}
+
+.signup-shell form label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
 /* Pixel trees decoration */
 .trees {
     position: fixed;
