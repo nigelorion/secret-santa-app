@@ -15,6 +15,7 @@ import {
 // Tries this many shuffles before declaring the constraints impossible.
 const MAX_ASSIGNMENT_ATTEMPTS = 400;
 const MIN_SIGNUP_SPIN_MS = 900;
+let isRefreshingCount = false;
 
 // Normalizes participant names so comparisons are case-insensitive.
 function normalizeName(name) {
@@ -295,9 +296,11 @@ function updateProgressBar() {
     if (fill) fill.style.width = `${percent}%`;
     if (label) label.textContent = primaryLabel;
     if (text) {
-        text.textContent = countKnown
-            ? `${signed} of ${total} have already shared their wish lists`
-            : `Progress is hidden right now — reach out to the organizer for an update`;
+        if (countKnown) {
+            text.textContent = `${signed} of ${total} have already shared their wish lists`;
+        } else {
+            text.innerHTML = `Progress is hidden right now — <button type="button" class="progress-refresh" onclick="refreshParticipantCount({ force: true })">try refreshing</button>`;
+        }
     }
 
     const adminFill = document.getElementById('adminProgressFill');
@@ -556,6 +559,30 @@ async function handleSignup(event) {
         setSignupMessage('You\'re signed up, but we hit a snag updating the page. Refresh to double-check your info.', 'info');
         state.signupInFlight = false;
         render();
+    }
+}
+
+async function refreshParticipantCount(options = {}) {
+    if (isRefreshingCount && !options.force) return;
+    isRefreshingCount = true;
+    try {
+        const snapshot = await getCountFromServer(collection(db, 'participants'));
+        const currentCount = snapshot.data().count || 0;
+        state.participantCount = currentCount;
+        state.participantCountKnown = true;
+        if (!options.silent) {
+            render();
+        }
+    } catch (error) {
+        console.error('Participant count refresh failed:', error);
+        if (!state.participantCount) {
+            state.participantCountKnown = false;
+            if (!options.silent) {
+                render();
+            }
+        }
+    } finally {
+        isRefreshingCount = false;
     }
 }
 
@@ -1092,6 +1119,7 @@ async function initializeUI() {
 
     await loadFromFirebase({ fetchParticipants: false });
     render();
+    refreshParticipantCount({ silent: true }).catch(() => {});
 
     onAuthStateChanged(auth, async (user) => {
         try {
@@ -1104,6 +1132,7 @@ async function initializeUI() {
 
             if (state.isAdminAuthenticated) {
                 await loadFromFirebase({ fetchParticipants: true });
+                await refreshParticipantCount({ force: true, silent: true });
             } else {
                 state.participants = [];
             }
@@ -1133,5 +1162,6 @@ export {
     sendPendingAssignments,
     setAssignmentPreviewVisibility,
     clearAllParticipants,
-    scrollToSignup
+    scrollToSignup,
+    refreshParticipantCount
 };

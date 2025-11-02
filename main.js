@@ -10,7 +10,8 @@ import {
     sendPendingAssignments,
     clearAllParticipants,
     setAssignmentPreviewVisibility,
-    scrollToSignup
+    scrollToSignup,
+    refreshParticipantCount
 } from './ui.js';
 
 // Expose UI handlers for inline HTML listeners.
@@ -25,6 +26,7 @@ window.sendPendingAssignments = sendPendingAssignments;
 window.clearAllParticipants = clearAllParticipants;
 window.setAssignmentPreviewVisibility = setAssignmentPreviewVisibility;
 window.scrollToSignup = scrollToSignup;
+window.refreshParticipantCount = refreshParticipantCount;
 
 // Boot the app once the bundle loads.
 initializeUI().catch(error => {

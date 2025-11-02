@@ -656,6 +656,22 @@ button:active {
     animation: float 4s ease-in-out infinite;
 }
 
+.progress-refresh {
+    background: transparent;
+    border: none;
+    color: #f5d67b;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    margin-left: 6px;
+}
+
+.progress-refresh:hover,
+.progress-refresh:focus {
+    color: #fff4c2;
+}
+
 
 .signup-loading {
     text-align: center;
