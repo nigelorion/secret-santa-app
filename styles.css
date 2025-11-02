@@ -656,22 +656,6 @@ button:active {
     animation: float 4s ease-in-out infinite;
 }
 
-.progress-refresh {
-    background: transparent;
-    border: none;
-    color: #f5d67b;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-    margin-left: 6px;
-}
-
-.progress-refresh:hover,
-.progress-refresh:focus {
-    color: #fff4c2;
-}
-
 
 .signup-loading {
     text-align: center;
@@ -680,15 +664,26 @@ button:active {
 
 .signup-shell {
     margin-top: 18px;
-    min-height: 520px;
+    display: block;
+    padding: 26px 22px;
+    background: rgba(12, 28, 22, 0.82);
+    border-radius: 18px;
+    border: 2px solid rgba(245, 214, 123, 0.35);
+    box-shadow: 0 12px 26px rgba(0,0,0,0.35);
+}
+
+.signup-shell.is-loading,
+.signup-shell.is-complete {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 18px;
+    align-items: center;
+    min-height: 360px;
 }
 
-.signup-shell.is-form {
-    justify-content: flex-start;
+.signup-shell form {
+    display: grid;
+    gap: 18px;
 }
 
 .loading-ornament {

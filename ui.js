@@ -296,11 +296,9 @@ function updateProgressBar() {
     if (fill) fill.style.width = `${percent}%`;
     if (label) label.textContent = primaryLabel;
     if (text) {
-        if (countKnown) {
-            text.textContent = `${signed} of ${total} have already shared their wish lists`;
-        } else {
-            text.innerHTML = `Progress is hidden right now — <button type="button" class="progress-refresh" onclick="refreshParticipantCount({ force: true })">try refreshing</button>`;
-        }
+        text.textContent = countKnown
+            ? `${signed} of ${total} have already shared their wish lists`
+            : `Progress is hidden right now — reach out to the organizer for an update`;
     }
 
     const adminFill = document.getElementById('adminProgressFill');
