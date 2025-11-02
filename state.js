@@ -24,6 +24,7 @@ const state = {
     previewAssignmentsVisible: false,
     signupComplete: false,
     lastSignupName: '',
+    signupInFlight: false,
     config: {
         historicalPairings: { year1: '', year2: '' },
         emailConfig: { serviceId: '', templateId: '', publicKey: '' }
@@ -114,6 +115,7 @@ async function clearAllParticipants() {
     state.previewAssignmentsVisible = false;
     state.signupComplete = false;
     state.lastSignupName = '';
+    state.signupInFlight = false;
     return true;
 }
 
@@ -143,6 +145,7 @@ function setAdminAuth(user, claims = {}) {
         state.previewAssignmentsVisible = false;
         state.signupComplete = false;
         state.lastSignupName = '';
+        state.signupInFlight = false;
     }
 }
 

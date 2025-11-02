@@ -374,6 +374,10 @@ function showView(view) {
 async function handleSignup(event) {
     event.preventDefault();
     const form = event.target;
+    if (state.signupInFlight) return;
+    state.signupInFlight = true;
+    render();
+
     const formData = new FormData(form);
     const name = (formData.get('name') || '').trim();
     const email = (formData.get('email') || '').trim();
@@ -388,6 +392,7 @@ async function handleSignup(event) {
 
     if (typeof navigator !== 'undefined' && navigator && 'onLine' in navigator && !navigator.onLine) {
         setSignupMessage('Looks like you\'re offline. Reconnect to the internet, then try signing up again.', 'error');
+        state.signupInFlight = false;
         return;
     }
 
@@ -396,6 +401,8 @@ async function handleSignup(event) {
         const currentCount = snapshot.data().count || 0;
         if (currentCount >= TOTAL_PARTICIPANTS_TARGET) {
             setSignupMessage('Sign-ups are full this year. If you need to update your info, contact the organizer.', 'error');
+            state.signupInFlight = false;
+            render();
             return;
         }
     } catch (error) {
@@ -412,6 +419,8 @@ async function handleSignup(event) {
             focusSelector: !name ? 'input[name="name"]' : !email ? 'input[name="email"]' : 'input[name="spouseName"]',
             formElement: form
         });
+        state.signupInFlight = false;
+        render();
         return;
     }
 
@@ -420,6 +429,8 @@ async function handleSignup(event) {
             focusSelector: 'input[name="name"]',
             formElement: form
         });
+        state.signupInFlight = false;
+        render();
         return;
     }
 
@@ -428,6 +439,8 @@ async function handleSignup(event) {
             focusSelector: 'input[name="email"]',
             formElement: form
         });
+        state.signupInFlight = false;
+        render();
         return;
     }
 
@@ -449,6 +462,8 @@ async function handleSignup(event) {
         setSignupMessage('We couldn\'t save your info. Check your connection and try again.', 'error', {
             formElement: form
         });
+        state.signupInFlight = false;
+        render();
         return;
     }
 
@@ -457,11 +472,14 @@ async function handleSignup(event) {
         toggleQuickPicks(false);
         state.signupComplete = true;
         state.lastSignupName = name;
+        state.signupInFlight = false;
         render();
         triggerCelebration();
     } catch (uiError) {
         console.error('Signup UI update error:', uiError);
         setSignupMessage('You\'re signed up, but we hit a snag updating the page. Refresh to double-check your info.', 'info');
+        state.signupInFlight = false;
+        render();
     }
 }
 
@@ -724,7 +742,27 @@ function render() {
     if (!content) return;
 
     if (state.view === 'signup') {
-        if (state.signupComplete) {
+        if (state.signupInFlight) {
+            content.innerHTML = `
+                <div id="signupFormTop"></div>
+                <div class="countdown-box" id="countdownBox">Loading countdown...</div>
+                <div class="progress-grid">
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                        <span id="progressLabel"></span>
+                    </div>
+                    <p class="progress-text" id="progressText"></p>
+                </div>
+                <div class="signup-loading card">
+                    <div class="loading-ornament">
+                        <span class="loader-ring"></span>
+                        <span class="loader-bauble">🎄</span>
+                    </div>
+                    <p class="success-lead" style="margin-bottom:10px;">Packing your wish list for the sleigh…</p>
+                    <p class="helper-text success-subtext">Hang tight while we wrap things up.</p>
+                </div>
+            `;
+        } else if (state.signupComplete) {
             const celebrant = escapeHtml(state.lastSignupName || 'Secret Santa friend');
             content.innerHTML = `
                 <div id="signupFormTop"></div>
