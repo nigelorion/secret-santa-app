@@ -468,9 +468,15 @@ async function handleSignup(event) {
         });
     } catch (error) {
         console.error('Signup error (saving participant):', error);
-        setSignupMessage('We couldn\'t save your info. Check your connection and try again.', 'error', {
-            formElement: form
-        });
+        console.log('Signup error code:', error?.code);
+        const permissionDenied = error?.code === 'permission-denied';
+        setSignupMessage(
+            permissionDenied
+                ? 'Sign-ups are paused right now. Reach out to the organizer if you need help getting on the list.'
+                : 'We couldn\'t save your info. Check your connection and try again.',
+            'error',
+            { formElement: form }
+        );
         state.signupInFlight = false;
         render();
         return;
