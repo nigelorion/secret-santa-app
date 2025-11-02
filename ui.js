@@ -17,6 +17,21 @@ const MAX_ASSIGNMENT_ATTEMPTS = 400;
 const MIN_SIGNUP_SPIN_MS = 900;
 let isRefreshingCount = false;
 
+function formatQuickPickLink(rawLink) {
+    if (!rawLink) return { ok: true, value: '' };
+    let candidate = rawLink.trim();
+    if (!candidate) return { ok: true, value: '' };
+    if (!/^https?:\/\//i.test(candidate)) {
+        candidate = `https://${candidate}`;
+    }
+    try {
+        const url = new URL(candidate);
+        return { ok: true, value: url.toString() };
+    } catch (error) {
+        return { ok: false, value: rawLink };
+    }
+}
+
 // Normalizes participant names so comparisons are case-insensitive.
 function normalizeName(name) {
     return (name || '').toString().trim().toLowerCase();
@@ -405,9 +420,9 @@ async function handleSignup(event) {
     const quickPick1 = (formData.get('quickPick1') || '').trim();
     const quickPick2 = (formData.get('quickPick2') || '').trim();
     const quickPick3 = (formData.get('quickPick3') || '').trim();
-    const quickPick1Link = (formData.get('quickPick1Link') || '').trim();
-    const quickPick2Link = (formData.get('quickPick2Link') || '').trim();
-    const quickPick3Link = (formData.get('quickPick3Link') || '').trim();
+    const quickPick1LinkRaw = (formData.get('quickPick1Link') || '').trim();
+    const quickPick2LinkRaw = (formData.get('quickPick2Link') || '').trim();
+    const quickPick3LinkRaw = (formData.get('quickPick3Link') || '').trim();
     const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
     state.signupFormDraft = {
         name,
@@ -417,9 +432,9 @@ async function handleSignup(event) {
         quickPick1,
         quickPick2,
         quickPick3,
-        quickPick1Link,
-        quickPick2Link,
-        quickPick3Link
+        quickPick1Link: quickPick1LinkRaw,
+        quickPick2Link: quickPick2LinkRaw,
+        quickPick3Link: quickPick3LinkRaw
     };
 
     if (typeof navigator !== 'undefined' && navigator && 'onLine' in navigator && !navigator.onLine) {
@@ -492,6 +507,25 @@ async function handleSignup(event) {
         return;
     }
 
+    const quickPickLinks = [
+        { label: 'Quick Pick 1 link', raw: quickPick1LinkRaw, selector: 'input[name="quickPick1Link"]' },
+        { label: 'Quick Pick 2 link', raw: quickPick2LinkRaw, selector: 'input[name="quickPick2Link"]' },
+        { label: 'Quick Pick 3 link', raw: quickPick3LinkRaw, selector: 'input[name="quickPick3Link"]' }
+    ];
+    const normalizedQuickPickLinks = [];
+    for (const entry of quickPickLinks) {
+        const formatted = formatQuickPickLink(entry.raw);
+        if (!formatted.ok) {
+            setSignupMessage(`Please use a full link for ${entry.label} (for example: https://giftideas.com).`, 'error', {
+                focusSelector: entry.selector
+            });
+            state.signupInFlight = false;
+            render();
+            return;
+        }
+        normalizedQuickPickLinks.push(formatted.value);
+    }
+
     try {
         await saveParticipant({
             name,
@@ -499,9 +533,9 @@ async function handleSignup(event) {
             wishlist,
             spouseName,
             quickPicks: [
-                { title: quickPick1, link: quickPick1Link },
-                { title: quickPick2, link: quickPick2Link },
-                { title: quickPick3, link: quickPick3Link }
+                { title: quickPick1, link: normalizedQuickPickLinks[0] },
+                { title: quickPick2, link: normalizedQuickPickLinks[1] },
+                { title: quickPick3, link: normalizedQuickPickLinks[2] }
             ].filter(item => item.title || item.link),
             timestamp: Date.now()
         });
@@ -878,11 +912,11 @@ function render() {
                 <form id="signupForm" onsubmit="handleSignup(event); return false;">
                     <div>
                         <label>YOUR FIRST NAME *</label>
-                        <input type="text" name="name" placeholder="e.g. - Santa" autocomplete="given-name" required value="${escapeHtml(state.signupFormDraft.name)}">
+                        <input type="text" name="name" placeholder="Santa" autocomplete="given-name" required value="${escapeHtml(state.signupFormDraft.name)}">
                     </div>
                     <div>
                         <label>YOUR EMAIL *</label>
-                        <input type="email" name="email" placeholder="e.g. - santa@gmail.com" autocomplete="email" required value="${escapeHtml(state.signupFormDraft.email)}">
+                        <input type="email" name="email" placeholder="santa@email.com" autocomplete="email" required value="${escapeHtml(state.signupFormDraft.email)}">
                     </div>
                     <div>
                         <label>WISH LIST LETTER</label>
@@ -895,18 +929,18 @@ function render() {
                         <div style="display:grid; gap:12px;">
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 1 TITLE</label>
-                                <input type="text" name="quickPick1" placeholder="e.g. - Cozy flannel pajamas" disabled value="${escapeHtml(state.signupFormDraft.quickPick1)}">
-                                <input type="url" name="quickPick1Link" placeholder="https://example.com/flannel-set" disabled value="${escapeHtml(state.signupFormDraft.quickPick1Link)}">
+                                <input type="text" name="quickPick1" placeholder="Cozy flannel PJs" disabled value="${escapeHtml(state.signupFormDraft.quickPick1)}">
+                                <input type="url" name="quickPick1Link" placeholder="https://flannels.com" disabled value="${escapeHtml(state.signupFormDraft.quickPick1Link)}">
                             </div>
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 2 TITLE</label>
-                                <input type="text" name="quickPick2" placeholder="e.g. - Cookbook from my wish list" disabled value="${escapeHtml(state.signupFormDraft.quickPick2)}">
-                                <input type="url" name="quickPick2Link" placeholder="https://example.com/cookbook" disabled value="${escapeHtml(state.signupFormDraft.quickPick2Link)}">
+                                <input type="text" name="quickPick2" placeholder="Holiday cookbook" disabled value="${escapeHtml(state.signupFormDraft.quickPick2)}">
+                                <input type="url" name="quickPick2Link" placeholder="https://cookbooks.com" disabled value="${escapeHtml(state.signupFormDraft.quickPick2Link)}">
                             </div>
                             <div style="display:grid; gap:8px;">
                                 <label style="margin-bottom:0;">ITEM 3 TITLE</label>
-                                <input type="text" name="quickPick3" placeholder="e.g. - Local coffee shop gift card" disabled value="${escapeHtml(state.signupFormDraft.quickPick3)}">
-                                <input type="url" name="quickPick3Link" placeholder="https://example.com/gift-card" disabled value="${escapeHtml(state.signupFormDraft.quickPick3Link)}">
+                                <input type="text" name="quickPick3" placeholder="Local coffee card" disabled value="${escapeHtml(state.signupFormDraft.quickPick3)}">
+                                <input type="url" name="quickPick3Link" placeholder="https://coffeeshop.com" disabled value="${escapeHtml(state.signupFormDraft.quickPick3Link)}">
                             </div>
                         </div>
                     </div>
