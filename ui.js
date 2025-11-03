@@ -880,7 +880,7 @@ async function clearAllParticipants() {
     }
 }
 
-async function incrementPublicCount() {
+async function modifyPublicCount(delta) {
     if (!state.isAdminAuthenticated) {
         const messageContainer = document.getElementById('adminMessage');
         if (messageContainer) {
@@ -893,7 +893,8 @@ async function incrementPublicCount() {
 
     try {
         if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Incrementing public counter…', 'info');
+            const verb = delta >= 0 ? 'Incrementing' : 'Decrementing';
+            messageContainer.innerHTML = showMessage(`${verb} public counter…`, 'info');
         }
 
         let baseline = state.participantCount;
@@ -908,20 +909,37 @@ async function incrementPublicCount() {
             }
         }
 
-        const nextCount = (typeof baseline === 'number' ? baseline : 0) + 1;
+        const current = typeof baseline === 'number' ? baseline : 0;
+        if (delta < 0 && current === 0) {
+            if (messageContainer) {
+                messageContainer.innerHTML = showMessage('Public counter is already at zero.', 'info');
+            }
+            return;
+        }
+
+        const nextCount = Math.max(0, current + delta);
         await persistParticipantCount(nextCount);
 
         render();
 
         if (messageContainer) {
-            messageContainer.innerHTML = showMessage(`Public counter set to ${nextCount}.`, 'success');
+            const action = delta >= 0 ? 'Incremented' : 'Decremented';
+            messageContainer.innerHTML = showMessage(`${action} public counter to ${nextCount}.`, 'success');
         }
     } catch (error) {
-        console.error('Error incrementing participant count:', error);
+        console.error('Error adjusting participant count:', error);
         if (messageContainer) {
             messageContainer.innerHTML = showMessage('Could not update the public counter. Try again in a moment.', 'error');
         }
     }
+}
+
+async function incrementPublicCount() {
+    await modifyPublicCount(1);
+}
+
+async function decrementPublicCount() {
+    await modifyPublicCount(-1);
 }
 
 // Persists config edits but only when the admin is signed in.
@@ -1135,10 +1153,11 @@ function render() {
                 ${participantsList}
                 <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;">
                     <button type="button" class="button-secondary" onclick="clearAllParticipants()">🧹 CLEAR ALL SIGNUPS</button>
-                    <button type="button" class="button-secondary" onclick="incrementPublicCount()">➕ INCREMENT PUBLIC COUNTER</button>
+                    <button type="button" class="button-secondary" onclick="decrementPublicCount()">➖ DECREMENT COUNTER</button>
+                    <button type="button" class="button-secondary" onclick="incrementPublicCount()">➕ INCREMENT COUNTER</button>
                 </div>
                 <p class="helper-text" style="margin-top:8px;">🧹 Clear removes every signup so you can start fresh during testing.</p>
-                <p class="helper-text">➕ Increment bumps the public counter by one without revealing participant details.</p>
+                <p class="helper-text">➖/➕ Adjust the public counter without exposing private signup data.</p>
             </div>
 
             <div class="section-box yellow">
@@ -1286,6 +1305,7 @@ export {
     setAssignmentPreviewVisibility,
     clearAllParticipants,
     incrementPublicCount,
+    decrementPublicCount,
     scrollToSignup,
     refreshParticipantCount
 };

@@ -12,7 +12,8 @@ import {
     setAssignmentPreviewVisibility,
     scrollToSignup,
     refreshParticipantCount,
-    incrementPublicCount
+    incrementPublicCount,
+    decrementPublicCount
 } from './ui.js';
 
 // Expose UI handlers for inline HTML listeners.
@@ -29,6 +30,7 @@ window.setAssignmentPreviewVisibility = setAssignmentPreviewVisibility;
 window.scrollToSignup = scrollToSignup;
 window.refreshParticipantCount = refreshParticipantCount;
 window.incrementPublicCount = incrementPublicCount;
+window.decrementPublicCount = decrementPublicCount;
 
 // Boot the app once the bundle loads.
 initializeUI().catch(error => {
