@@ -426,11 +426,14 @@ button:active {
     width: 100%;
     text-align: center;
     font-size: 12px;
-    font-weight: 600;
-    color: #fcefd7;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: #fdf1c7;
     line-height: 28px;
-    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
     z-index: 1;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
 }
 
 .progress-fill {
@@ -459,11 +462,33 @@ button:active {
     margin: 0 auto 28px;
     width: 100%;
     max-width: none;
-    background: rgba(12, 28, 20, 0.78);
-    border: 1px solid rgba(245, 214, 123, 0.25);
-    border-radius: 20px;
-    padding: 18px 20px;
-    box-shadow: 0 12px 26px rgba(0,0,0,0.35);
+    background:
+        linear-gradient(160deg, rgba(24, 62, 46, 0.96), rgba(13, 35, 26, 0.94));
+    border: 2px solid rgba(245, 214, 123, 0.65);
+    border-radius: 22px;
+    padding: 22px 24px;
+    box-shadow:
+        0 16px 28px rgba(0, 0, 0, 0.36),
+        0 0 18px rgba(27, 64, 49, 0.45);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 14% 18%, rgba(255, 232, 180, 0.55), transparent 55%),
+        radial-gradient(circle at 82% 12%, rgba(255, 214, 150, 0.4), transparent 60%),
+        radial-gradient(circle at 46% 88%, rgba(215, 64, 82, 0.25), transparent 60%),
+        radial-gradient(circle at 68% 74%, rgba(126, 214, 124, 0.2), transparent 65%);
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.progress-wrap > * {
+    position: relative;
 }
 
 .top-entry .progress-wrap {
@@ -477,10 +502,14 @@ button:active {
 }
 
 .progress-grid .progress-text {
-    color: #fcefd7;
-    font-size: 14px;
-    letter-spacing: 0.05em;
+    color: #f5d67b;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.06em;
     text-align: center;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
 }
 
 @media (min-width: 640px) {
