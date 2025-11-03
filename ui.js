@@ -962,12 +962,14 @@ function render() {
 
         content.innerHTML = `
             <div id="signupFormTop"></div>
-            <div class="progress-grid">
-                <div class="progress-bar" id="progressBar">
-                    <div class="progress-fill" id="progressFill" style="width:0%"></div>
-                    <span id="progressLabel"></span>
+            <div class="progress-wrap">
+                <div class="progress-grid">
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                        <span id="progressLabel"></span>
+                    </div>
+                    <p class="progress-text" id="progressText"></p>
                 </div>
-                <p class="progress-text" id="progressText"></p>
             </div>
             ${messageHtml}
             <div class="${shellClass}">
@@ -1037,12 +1039,14 @@ function render() {
         content.innerHTML = `
             <h2>ADMIN PANEL</h2>
             <div class="countdown-box" id="adminCountdown">Loading countdown...</div>
-            <div class="progress-grid">
-                <div class="progress-bar" id="adminProgressBar">
-                    <div class="progress-fill" id="adminProgressFill" style="width:0%"></div>
-                    <span id="adminProgressLabel"></span>
+            <div class="progress-wrap">
+                <div class="progress-grid">
+                    <div class="progress-bar" id="adminProgressBar">
+                        <div class="progress-fill" id="adminProgressFill" style="width:0%"></div>
+                        <span id="adminProgressLabel"></span>
+                    </div>
+                    <p class="progress-text" id="adminProgressText"></p>
                 </div>
-                <p class="progress-text" id="adminProgressText"></p>
             </div>
             <p class="helper-text" style="text-align:center;margin-bottom:12px;">Signed in as ${escapeHtml(state.adminEmail)}</p>
             <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:18px;">
