@@ -710,7 +710,12 @@ function parseAssignments() {
 // Sends out EmailJS notifications for a finalized assignment set.
 async function sendEmails(assignments) {
     try {
-        emailjs.init(state.config.emailConfig.publicKey);
+        const emailClient = globalThis.emailjs;
+        if (!emailClient || typeof emailClient.init !== 'function' || typeof emailClient.send !== 'function') {
+            throw new Error('EmailJS SDK is not available on the window object.');
+        }
+
+        emailClient.init(state.config.emailConfig.publicKey);
 
         document.getElementById('adminMessage').innerHTML = showMessage('Sending emails...', 'info');
 
@@ -728,7 +733,7 @@ async function sendEmails(assignments) {
                 const wishlistFormats = formatWishlistForEmail(assignment.receiver.wishlist);
                 const quickPickFormats = buildQuickPickFormats(assignment.receiver.quickPicks);
 
-                await emailjs.send(
+                await emailClient.send(
                     state.config.emailConfig.serviceId,
                     state.config.emailConfig.templateId,
                     {
@@ -768,8 +773,26 @@ async function runSecretSanta() {
         document.getElementById('adminMessage').innerHTML = showMessage('Admin sign-in required to run assignments.', 'error');
         return;
     }
+
+    const messageContainer = document.getElementById('adminMessage');
+    if (messageContainer) {
+        messageContainer.innerHTML = showMessage('Loading the latest signups before drawing…', 'info');
+    }
+
+    try {
+        await loadFromFirebase({ fetchParticipants: true });
+    } catch (error) {
+        console.error('Unable to refresh participants before generating assignments:', error);
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('Could not load the latest signups. Check your connection and try again.', 'error');
+        }
+        return;
+    }
+
     if (state.participants.length < 3) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Need at least 3 participants!', 'error');
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('Need at least 3 participants!', 'error');
+        }
         return;
     }
 
@@ -777,7 +800,9 @@ async function runSecretSanta() {
     const participantContext = buildParticipantContext(state.participants);
 
     if (participantContext.length !== state.participants.length) {
-        document.getElementById('adminMessage').innerHTML = showMessage('All participants need a name before assignments can be created.', 'error');
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('All participants need a name before assignments can be created.', 'error');
+        }
         return;
     }
 
