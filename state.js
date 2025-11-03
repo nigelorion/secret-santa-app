@@ -14,6 +14,8 @@ import {
 
 const TOTAL_PARTICIPANTS_TARGET = 10;
 
+const participantCountDocRef = doc(db, 'stats', 'participants');
+
 // Centralized app state that every module reads/writes.
 const state = {
     view: 'signup',
@@ -39,7 +41,7 @@ const state = {
         quickPick3Link: ''
     },
     participantCount: null,
-    participantCountKnown: true,
+    participantCountKnown: false,
     config: {
         historicalPairings: { year1: '', year2: '' },
         emailConfig: { serviceId: '', templateId: '', publicKey: '' }
@@ -69,6 +71,30 @@ async function loadFromFirebase(options = {}) {
     } catch (error) {
         console.error('Error loading config from Firebase:', error);
         throw error;
+    }
+
+    try {
+        const countDoc = await getDoc(participantCountDocRef);
+        if (countDoc.exists()) {
+            const countData = countDoc.data();
+            const countValue = typeof countData.participantCount === 'number'
+                ? countData.participantCount
+                : parseInt(countData.participantCount, 10);
+            if (Number.isFinite(countValue)) {
+                state.participantCount = countValue;
+                state.participantCountKnown = true;
+            } else {
+                state.participantCount = null;
+                state.participantCountKnown = false;
+            }
+        } else {
+            state.participantCount = null;
+            state.participantCountKnown = false;
+        }
+    } catch (error) {
+        console.error('Error loading participant count from Firebase:', error);
+        state.participantCount = null;
+        state.participantCountKnown = false;
     }
 
     if (fetchParticipants) {
@@ -178,9 +204,45 @@ function setAdminAuth(user, claims = {}) {
             quickPick2Link: '',
             quickPick3Link: ''
         };
-        state.participantCount = null;
-        state.participantCountKnown = true;
     }
+}
+
+async function fetchParticipantCount() {
+    try {
+        const snapshot = await getDoc(participantCountDocRef);
+        if (snapshot.exists()) {
+            const data = snapshot.data();
+            const countValue = typeof data.participantCount === 'number'
+                ? data.participantCount
+                : parseInt(data.participantCount, 10);
+            if (Number.isFinite(countValue)) {
+                state.participantCount = countValue;
+                state.participantCountKnown = true;
+                return countValue;
+            }
+        }
+        state.participantCount = null;
+        state.participantCountKnown = false;
+        return null;
+    } catch (error) {
+        state.participantCount = null;
+        state.participantCountKnown = false;
+        throw error;
+    }
+}
+
+async function persistParticipantCount(count) {
+    await setDoc(
+        participantCountDocRef,
+        {
+            participantCount: count,
+            updatedAt: Date.now()
+        },
+        { merge: true }
+    );
+    state.participantCount = count;
+    state.participantCountKnown = true;
+    return count;
 }
 
 export {
@@ -192,5 +254,7 @@ export {
     updateConfig,
     clearAllParticipants,
     parseHistoricalPairings,
-    setAdminAuth
+    setAdminAuth,
+    fetchParticipantCount,
+    persistParticipantCount
 };

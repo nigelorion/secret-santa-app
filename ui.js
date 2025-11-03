@@ -1,4 +1,4 @@
-import { db, collection, getCountFromServer, auth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from './firebase.js';
+import { auth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from './firebase.js';
 import {
     state,
     TOTAL_PARTICIPANTS_TARGET,
@@ -7,7 +7,9 @@ import {
     updateConfig as updateConfigState,
     clearAllParticipants as clearAllParticipantsData,
     parseHistoricalPairings,
-    setAdminAuth
+    setAdminAuth,
+    fetchParticipantCount,
+    persistParticipantCount
 } from './state.js';
 
 // ===== Secret Santa assignment helpers =====
@@ -173,18 +175,28 @@ function generateAssignments(context, disallowedMap) {
     return null;
 }
 
-// Converts the wishlist text into HTML-safe markup for emails.
-function formatWishlistHtml(wishlist) {
-    if (!wishlist || !wishlist.trim()) {
-        return '<em>No wish list provided yet</em>';
+function formatWishlistForEmail(wishlist) {
+    const trimmed = (wishlist || '').trim();
+    if (!trimmed) {
+        return {
+            text: 'No wish list provided yet',
+            html: '<em>No wish list provided yet</em>'
+        };
     }
-    const escaped = escapeHtml(wishlist.trim());
-    return escaped.replace(/\r?\n\r?\n/g, '<br><br>').replace(/\r?\n/g, '<br>');
+
+    const text = trimmed.replace(/\r?\n\r?\n/g, '\n\n');
+    const html = escapeHtml(trimmed)
+        .replace(/\r?\n\r?\n/g, '<br><br>')
+        .replace(/\r?\n/g, '<br>');
+
+    return { text, html };
 }
 
 // Converts the quick picks to both plain text and HTML bullet list.
 function buildQuickPickFormats(quickPicks = []) {
-    const trimmed = (quickPicks || []).filter(item => item && (item.title || item.link)).slice(0, 3);
+    const trimmed = (quickPicks || [])
+        .filter(item => item && (item.title || item.link))
+        .slice(0, 3);
     if (trimmed.length === 0) {
         return {
             text: 'Surprise them—no quick picks added!',
@@ -192,21 +204,20 @@ function buildQuickPickFormats(quickPicks = []) {
         };
     }
 
-    const text = trimmed.map(item => {
-        const title = item.title || '';
-        const link = item.link || '';
-        if (title && link) return `${title} — ${link}`;
-        return title || link;
-    }).filter(Boolean).join('\n');
+    const text = trimmed.map((item, index) => {
+        const title = item.title || `Pick ${index + 1}`;
+        const link = item.link ? ` — ${item.link}` : '';
+        return `• ${title}${link}`;
+    }).join('\n');
 
-    const htmlItems = trimmed.map(item => {
-        const safeTitle = escapeHtml(item.title || 'Wishlist item');
-        const safeLink = (item.link || '').trim();
-        if (safeLink) {
-            const encodedLink = escapeHtml(safeLink);
-            return `<li><a href="${encodedLink}" target="_blank" rel="noopener">${safeTitle}</a></li>`;
+    const htmlItems = trimmed.map((item, index) => {
+        const title = escapeHtml(item.title || `Pick ${index + 1}`);
+        const link = (item.link || '').trim();
+        if (link) {
+            const encodedLink = escapeHtml(link);
+            return `<li><a href="${encodedLink}" target="_blank" rel="noopener">${title}</a></li>`;
         }
-        return `<li>${safeTitle}</li>`;
+        return `<li>${title}</li>`;
     }).join('');
 
     return {
@@ -447,9 +458,17 @@ async function handleSignup(event) {
         return;
     }
 
+    let currentCount = typeof state.participantCount === 'number' ? state.participantCount : null;
     try {
-        const snapshot = await getCountFromServer(collection(db, 'participants'));
-        const currentCount = snapshot.data().count || 0;
+        const fetchedCount = await fetchParticipantCount();
+        if (typeof fetchedCount === 'number') {
+            currentCount = fetchedCount;
+        }
+    } catch (error) {
+        console.error('Participant count check failed:', error);
+    }
+
+    if (typeof currentCount === 'number') {
         state.participantCount = currentCount;
         state.participantCountKnown = true;
         if (currentCount >= TOTAL_PARTICIPANTS_TARGET) {
@@ -458,11 +477,9 @@ async function handleSignup(event) {
             render();
             return;
         }
-    } catch (error) {
-        console.error('Participant count check failed:', error);
-        if (error?.code === 'permission-denied') {
-            state.participantCountKnown = false;
-        }
+    } else {
+        state.participantCount = null;
+        state.participantCountKnown = false;
     }
 
     const requiredMissing = [];
@@ -602,20 +619,21 @@ async function refreshParticipantCount(options = {}) {
     isRefreshingCount = true;
     const wasKnown = state.participantCountKnown && typeof state.participantCount === 'number';
     try {
-        const snapshot = await getCountFromServer(collection(db, 'participants'));
-        const currentCount = snapshot.data().count || 0;
-        state.participantCount = currentCount;
-        state.participantCountKnown = true;
+        const latest = await fetchParticipantCount();
+        if (typeof latest === 'number') {
+            state.participantCount = latest;
+            state.participantCountKnown = true;
+        } else {
+            state.participantCountKnown = false;
+        }
         if (!options.silent || !wasKnown) {
             render();
         }
     } catch (error) {
         console.error('Participant count refresh failed:', error);
-        if (!state.participantCount) {
-            state.participantCountKnown = false;
-            if (!options.silent || wasKnown) {
-                render();
-            }
+        state.participantCountKnown = false;
+        if (!options.silent || wasKnown) {
+            render();
         }
     } finally {
         isRefreshingCount = false;
@@ -689,8 +707,7 @@ async function sendEmails(assignments) {
 
         for (const assignment of assignments) {
             try {
-                const wishlistPlain = assignment.receiver.wishlist || 'No wish list provided yet';
-                const wishlistHtml = formatWishlistHtml(assignment.receiver.wishlist);
+                const wishlistFormats = formatWishlistForEmail(assignment.receiver.wishlist);
                 const quickPickFormats = buildQuickPickFormats(assignment.receiver.quickPicks);
 
                 await emailjs.send(
@@ -700,9 +717,11 @@ async function sendEmails(assignments) {
                         to_name: assignment.giver.name,
                         to_email: assignment.giver.email,
                         receiver_name: assignment.receiver.name,
-                        receiver_wishlist: wishlistPlain,
-                        receiver_wishlist_html: wishlistHtml,
+                        receiver_wishlist: wishlistFormats.text,
+                        receiver_wishlist_text: wishlistFormats.text,
+                        receiver_wishlist_html: wishlistFormats.html,
                         receiver_quick_picks: quickPickFormats.text,
+                        receiver_quick_picks_text: quickPickFormats.text,
                         receiver_quick_picks_html: quickPickFormats.html,
                         countdown_to_christmas: countdownLine
                     }
@@ -857,6 +876,50 @@ async function clearAllParticipants() {
         const messageContainer = document.getElementById('adminMessage');
         if (messageContainer) {
             messageContainer.innerHTML = showMessage('Unable to clear participants. Try again in a moment.', 'error');
+        }
+    }
+}
+
+async function incrementPublicCount() {
+    if (!state.isAdminAuthenticated) {
+        const messageContainer = document.getElementById('adminMessage');
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('Sign in as admin to update the public counter.', 'error');
+        }
+        return;
+    }
+
+    const messageContainer = document.getElementById('adminMessage');
+
+    try {
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('Incrementing public counter…', 'info');
+        }
+
+        let baseline = state.participantCount;
+        if (typeof baseline !== 'number') {
+            try {
+                const remoteCount = await fetchParticipantCount();
+                if (typeof remoteCount === 'number') {
+                    baseline = remoteCount;
+                }
+            } catch (error) {
+                console.error('Unable to load current public counter:', error);
+            }
+        }
+
+        const nextCount = (typeof baseline === 'number' ? baseline : 0) + 1;
+        await persistParticipantCount(nextCount);
+
+        render();
+
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage(`Public counter set to ${nextCount}.`, 'success');
+        }
+    } catch (error) {
+        console.error('Error incrementing participant count:', error);
+        if (messageContainer) {
+            messageContainer.innerHTML = showMessage('Could not update the public counter. Try again in a moment.', 'error');
         }
     }
 }
@@ -1070,8 +1133,12 @@ function render() {
             <div style="margin-bottom: 30px;">
                 <h3>PARTICIPANTS (${state.participants.length})</h3>
                 ${participantsList}
-                <button type="button" class="button-secondary" onclick="clearAllParticipants()">🧹 CLEAR ALL SIGNUPS</button>
-                <p class="helper-text" style="margin-top:8px;">Testing helper: removes everyone so you can start fresh.</p>
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;">
+                    <button type="button" class="button-secondary" onclick="clearAllParticipants()">🧹 CLEAR ALL SIGNUPS</button>
+                    <button type="button" class="button-secondary" onclick="incrementPublicCount()">➕ INCREMENT PUBLIC COUNTER</button>
+                </div>
+                <p class="helper-text" style="margin-top:8px;">🧹 Clear removes every signup so you can start fresh during testing.</p>
+                <p class="helper-text">➕ Increment bumps the public counter by one without revealing participant details.</p>
             </div>
 
             <div class="section-box yellow">
@@ -1218,6 +1285,7 @@ export {
     sendPendingAssignments,
     setAssignmentPreviewVisibility,
     clearAllParticipants,
+    incrementPublicCount,
     scrollToSignup,
     refreshParticipantCount
 };
