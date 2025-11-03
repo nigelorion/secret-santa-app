@@ -215,7 +215,7 @@ function buildQuickPickFormats(quickPicks = []) {
         const link = (item.link || '').trim();
         if (link) {
             const encodedLink = escapeHtml(link);
-            return `<li><a href="${encodedLink}" target="_blank" rel="noopener">${title}</a></li>`;
+            return `<li>${title} — <a href="${encodedLink}" target="_blank" rel="noopener noreferrer">view link</a></li>`;
         }
         return `<li>${title}</li>`;
     }).join('');
