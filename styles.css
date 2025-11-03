@@ -115,6 +115,26 @@ body::after {
     margin-bottom: 12px;
 }
 
+.header-ribbon {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(90deg, rgba(222, 64, 82, 0.92), rgba(120, 24, 40, 0.92));
+    padding: 10px 18px;
+    border-radius: 999px;
+    border: 2px solid rgba(245, 214, 123, 0.55);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff4d6;
+    margin-bottom: 18px;
+}
+
+.header-ribbon span {
+    font-size: 0.9em;
+}
+
 .header-sleigh {
     position: relative;
     width: 100%;
@@ -128,16 +148,16 @@ body::after {
     display: inline-block;
     font-size: 34px;
     white-space: nowrap;
-    transform: translateX(140%);
+    transform: translateX(160%);
     animation: parade-fly 12s cubic-bezier(0.6, 0, 0.4, 1) infinite;
     will-change: transform;
 }
 
 @keyframes parade-fly {
     0% { transform: translateX(160%); opacity: 0; }
-    15% { opacity: 1; }
-    85% { opacity: 1; }
-    100% { transform: translateX(-160%); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateX(-220%); opacity: 0; }
 }
 
 .quick-actions {

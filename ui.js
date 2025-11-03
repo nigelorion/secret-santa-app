@@ -348,6 +348,9 @@ function updateCountdown() {
     const countdownBox = document.getElementById('countdownBox');
     if (countdownBox) countdownBox.textContent = message;
 
+    const ribbonCountdown = document.getElementById('ribbonCountdown');
+    if (ribbonCountdown) ribbonCountdown.textContent = message;
+
     const adminCountdown = document.getElementById('adminCountdown');
     if (adminCountdown) adminCountdown.textContent = message;
 }
@@ -959,7 +962,6 @@ function render() {
 
         content.innerHTML = `
             <div id="signupFormTop"></div>
-            <div class="countdown-box" id="countdownBox">Loading countdown...</div>
             <div class="progress-grid">
                 <div class="progress-bar" id="progressBar">
                     <div class="progress-fill" id="progressFill" style="width:0%"></div>
