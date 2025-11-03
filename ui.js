@@ -1156,6 +1156,7 @@ async function initializeUI() {
     document.addEventListener('focusin', handleFocusScroll);
     setupStaticListeners();
 
+    updateCountdown();
     await loadFromFirebase({ fetchParticipants: false });
     render();
     refreshParticipantCount({ silent: true }).catch(() => {});
