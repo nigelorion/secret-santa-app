@@ -338,7 +338,7 @@ function updateCountdown() {
     const days = getDaysUntilChristmas();
     let message = '🎄 Christmas is here!';
     if (days > 1) {
-        message = `🎅 ${days} days until Christmas`;
+        message = `🎅 ${days} days until Christmas!!!`;
     } else if (days === 1) {
         message = '🎅 1 day until Christmas';
     } else if (days === 0) {
