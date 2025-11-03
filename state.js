@@ -21,6 +21,7 @@ const state = {
     view: 'signup',
     isAdminAuthenticated: false,
     adminEmail: '',
+    adminMessage: { text: '', type: 'info' },
     participants: [],
     pendingAssignments: null,
     previewAssignmentsVisible: false,
@@ -188,6 +189,7 @@ function setAdminAuth(user, claims = {}) {
     if (!isAdmin) {
         state.pendingAssignments = null;
         state.previewAssignmentsVisible = false;
+        state.adminMessage = { text: '', type: 'info' };
         state.signupComplete = false;
         state.lastSignupName = '';
         state.signupInFlight = false;

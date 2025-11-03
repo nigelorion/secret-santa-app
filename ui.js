@@ -294,6 +294,17 @@ function showMessage(message, type) {
     return `<div class="message ${typeClass}">${message}</div>`;
 }
 
+function setAdminMessage(message, type = 'info') {
+    state.adminMessage = {
+        text: message || '',
+        type: message && type ? type : 'info'
+    };
+    const container = document.getElementById('adminMessage');
+    if (container) {
+        container.innerHTML = message ? showMessage(message, state.adminMessage.type) : '';
+    }
+}
+
 // Places a message above the form and ensures mobile users see it.
 function setSignupMessage(message, type = 'info', options = {}) {
     state.signupMessage = {
@@ -717,7 +728,7 @@ async function sendEmails(assignments) {
 
         emailClient.init(state.config.emailConfig.publicKey);
 
-        document.getElementById('adminMessage').innerHTML = showMessage('Sending emails...', 'info');
+        setAdminMessage('Sending emails...', 'info');
 
         let successCount = 0;
         let failCount = 0;
@@ -757,42 +768,45 @@ async function sendEmails(assignments) {
         }
 
         if (failCount === 0) {
-            document.getElementById('adminMessage').innerHTML = showMessage(`🎉 Success! ${successCount} Secret Santa emails have been sent! Check your inbox for your assignment!`, 'success');
+            setAdminMessage(`🎉 Success! ${successCount} Secret Santa emails have been sent! Check your inbox for your assignment!`, 'success');
         } else {
-            document.getElementById('adminMessage').innerHTML = showMessage(`⚠️ Partially complete: ${successCount} emails sent, ${failCount} failed. Check console for details.`, 'error');
+            setAdminMessage(`⚠️ Partially complete: ${successCount} emails sent, ${failCount} failed. Check console for details.`, 'error');
         }
     } catch (error) {
         console.error('Email sending error:', error);
-        document.getElementById('adminMessage').innerHTML = showMessage('❌ Failed to send emails. Please check your EmailJS configuration and try again.', 'error');
+        setAdminMessage('❌ Failed to send emails. Please check your EmailJS configuration and try again.', 'error');
     }
 }
 
 // Generates a spoiler-free assignment preview that satisfies all constraints.
 async function runSecretSanta() {
     if (!state.isAdminAuthenticated) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Admin sign-in required to run assignments.', 'error');
+        setAdminMessage('Admin sign-in required to run assignments.', 'error');
         return;
     }
 
-    const messageContainer = document.getElementById('adminMessage');
-    if (messageContainer) {
-        messageContainer.innerHTML = showMessage('Loading the latest signups before drawing…', 'info');
-    }
+    const cachedParticipants = Array.isArray(state.participants) ? [...state.participants] : [];
+    setAdminMessage('Loading the latest signups before drawing…', 'info');
 
     try {
         await loadFromFirebase({ fetchParticipants: true });
     } catch (error) {
         console.error('Unable to refresh participants before generating assignments:', error);
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Could not load the latest signups. Check your connection and try again.', 'error');
-        }
+        setAdminMessage('Could not load the latest signups. Check your connection and try again.', 'error');
+    }
+
+    if ((!Array.isArray(state.participants) || state.participants.length === 0) && cachedParticipants.length > 0) {
+        state.participants = cachedParticipants;
+        setAdminMessage('Using the previously loaded signups. Refresh the page if you need the latest list.', 'info');
+    }
+
+    if (!Array.isArray(state.participants) || state.participants.length === 0) {
+        setAdminMessage('No participants found. Add some signups before running the draw.', 'error');
         return;
     }
 
     if (state.participants.length < 3) {
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Need at least 3 participants!', 'error');
-        }
+        setAdminMessage('Need at least 3 participants!', 'error');
         return;
     }
 
@@ -800,9 +814,7 @@ async function runSecretSanta() {
     const participantContext = buildParticipantContext(state.participants);
 
     if (participantContext.length !== state.participants.length) {
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('All participants need a name before assignments can be created.', 'error');
-        }
+        setAdminMessage('All participants need a name before assignments can be created.', 'error');
         return;
     }
 
@@ -811,7 +823,7 @@ async function runSecretSanta() {
     const assignments = generateAssignments(participantContext, disallowedMap);
 
     if (!assignments) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Could not create valid assignments with current constraints. Try again!', 'error');
+        setAdminMessage('Could not create valid assignments with current constraints. Try again!', 'error');
         state.pendingAssignments = null;
         state.previewAssignmentsVisible = false;
         render();
@@ -829,48 +841,41 @@ async function runSecretSanta() {
 
     render();
 
-    const adminMessage = document.getElementById('adminMessage');
-    if (adminMessage) {
-        const emailConfigReady = state.config.emailConfig.serviceId && state.config.emailConfig.templateId && state.config.emailConfig.publicKey;
-        const hint = emailConfigReady
-            ? 'Click "Reveal matches" if you want to double-check, or go straight to "Send Emails" when you\'re ready.'
-            : 'Preview ready. Enter your EmailJS settings before sending.';
-        adminMessage.innerHTML = showMessage(`Assignments generated! ${hint}`, emailConfigReady ? 'info' : 'error');
-    }
+    const emailConfigReady = state.config.emailConfig.serviceId && state.config.emailConfig.templateId && state.config.emailConfig.publicKey;
+    const hint = emailConfigReady
+        ? 'Click "Reveal matches" if you want to double-check, or go straight to "Send Emails" when you\'re ready.'
+        : 'Preview ready! Enter your EmailJS settings before sending.';
+    setAdminMessage(`Assignments generated! ${hint}`, emailConfigReady ? 'info' : 'error');
 }
 
 // Triggers the actual EmailJS send after the admin reviews the preview.
 async function sendPendingAssignments() {
     if (!state.isAdminAuthenticated) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Admin sign-in required to send assignments.', 'error');
+        setAdminMessage('Admin sign-in required to send assignments.', 'error');
         return;
     }
 
     if (!state.pendingAssignments || state.pendingAssignments.length === 0) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Generate a preview first, then click SEND EMAILS.', 'info');
+        setAdminMessage('Generate a preview first, then click SEND EMAILS.', 'info');
         return;
     }
 
     if (!state.config.emailConfig.serviceId || !state.config.emailConfig.templateId || !state.config.emailConfig.publicKey) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Please enter your EmailJS settings before sending.', 'error');
+        setAdminMessage('Please enter your EmailJS settings before sending.', 'error');
         return;
     }
 
     const shouldSend = window.confirm('Send Secret Santa assignments to everyone now?');
     if (!shouldSend) {
-        document.getElementById('adminMessage').innerHTML = showMessage('Emails were not sent. You can click SEND EMAILS whenever you\'re ready.', 'info');
+        setAdminMessage('Emails were not sent. You can click SEND EMAILS whenever you\'re ready.', 'info');
         return;
     }
 
     await sendEmails(state.pendingAssignments);
-    const messageContent = document.getElementById('adminMessage')?.innerHTML || '';
     state.pendingAssignments = null;
     state.previewAssignmentsVisible = false;
     render();
-    const messageContainer = document.getElementById('adminMessage');
-    if (messageContainer && messageContent) {
-        messageContainer.innerHTML = messageContent;
-    }
+    setAdminMessage(state.adminMessage.text, state.adminMessage.type);
 }
 
 // Toggles whether the admin panel reveals or hides the pending matches.
@@ -878,22 +883,15 @@ function setAssignmentPreviewVisibility(visible) {
     if (!state.pendingAssignments || state.pendingAssignments.length === 0) {
         return;
     }
-    const messageContent = document.getElementById('adminMessage')?.innerHTML || '';
     state.previewAssignmentsVisible = !!visible;
     render();
-    const messageContainer = document.getElementById('adminMessage');
-    if (messageContainer && messageContent) {
-        messageContainer.innerHTML = messageContent;
-    }
+    setAdminMessage(state.adminMessage.text, state.adminMessage.type);
 }
 
 // Removes every signup (handy for testing cycles).
 async function clearAllParticipants() {
     if (!state.isAdminAuthenticated) {
-        const messageContainer = document.getElementById('adminMessage');
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Admin sign-in required to clear participants.', 'error');
-        }
+        setAdminMessage('Admin sign-in required to clear participants.', 'error');
         return;
     }
     const confirmed = window.confirm('This will remove everyone who has signed up. Continue?');
@@ -901,44 +899,28 @@ async function clearAllParticipants() {
 
     try {
         if (state.participants.length === 0) {
-            const currentMessage = document.getElementById('adminMessage');
-            if (currentMessage) {
-                currentMessage.innerHTML = showMessage('There aren\'t any sign-ups to clear right now.', 'info');
-            }
+            setAdminMessage('There aren\'t any sign-ups to clear right now.', 'info');
             return;
         }
         await clearAllParticipantsData();
         await loadFromFirebase({ fetchParticipants: true });
         render();
-        const messageContainer = document.getElementById('adminMessage');
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Cleared all participants for testing.', 'info');
-        }
+        setAdminMessage('Cleared all participants for testing.', 'info');
     } catch (error) {
         console.error('Error clearing participants:', error);
-        const messageContainer = document.getElementById('adminMessage');
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Unable to clear participants. Try again in a moment.', 'error');
-        }
+        setAdminMessage('Unable to clear participants. Try again in a moment.', 'error');
     }
 }
 
 async function modifyPublicCount(delta) {
     if (!state.isAdminAuthenticated) {
-        const messageContainer = document.getElementById('adminMessage');
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Sign in as admin to update the public counter.', 'error');
-        }
+        setAdminMessage('Sign in as admin to update the public counter.', 'error');
         return;
     }
 
-    const messageContainer = document.getElementById('adminMessage');
-
     try {
-        if (messageContainer) {
-            const verb = delta >= 0 ? 'Incrementing' : 'Decrementing';
-            messageContainer.innerHTML = showMessage(`${verb} public counter…`, 'info');
-        }
+        const verb = delta >= 0 ? 'Incrementing' : 'Decrementing';
+        setAdminMessage(`${verb} public counter…`, 'info');
 
         let baseline = state.participantCount;
         if (typeof baseline !== 'number') {
@@ -954,9 +936,7 @@ async function modifyPublicCount(delta) {
 
         const current = typeof baseline === 'number' ? baseline : 0;
         if (delta < 0 && current === 0) {
-            if (messageContainer) {
-                messageContainer.innerHTML = showMessage('Public counter is already at zero.', 'info');
-            }
+            setAdminMessage('Public counter is already at zero.', 'info');
             return;
         }
 
@@ -965,15 +945,11 @@ async function modifyPublicCount(delta) {
 
         render();
 
-        if (messageContainer) {
-            const action = delta >= 0 ? 'Incremented' : 'Decremented';
-            messageContainer.innerHTML = showMessage(`${action} public counter to ${nextCount}.`, 'success');
-        }
+        const action = delta >= 0 ? 'Incremented' : 'Decremented';
+        setAdminMessage(`${action} public counter to ${nextCount}.`, 'success');
     } catch (error) {
         console.error('Error adjusting participant count:', error);
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Could not update the public counter. Try again in a moment.', 'error');
-        }
+        setAdminMessage('Could not update the public counter. Try again in a moment.', 'error');
     }
 }
 
@@ -988,10 +964,7 @@ async function decrementPublicCount() {
 // Persists config edits but only when the admin is signed in.
 function updateConfig(field, value) {
     if (!state.isAdminAuthenticated) {
-        const messageContainer = document.getElementById('adminMessage');
-        if (messageContainer) {
-            messageContainer.innerHTML = showMessage('Sign in as admin to update settings.', 'error');
-        }
+        setAdminMessage('Sign in as admin to update settings.', 'error');
         return Promise.resolve(false);
     }
     return updateConfigState(field, value);
@@ -1189,7 +1162,9 @@ function render() {
                 <button type="button" class="button-secondary" onclick="handleAdminLogout()" style="width:auto;padding:10px 18px;">SIGN OUT</button>
                 <button type="button" class="button-secondary" onclick="showView('signup')" style="width:auto;padding:10px 18px;">⬅ BACK TO SIGN UP</button>
             </div>
-            <div id="adminMessage"></div>
+            <div id="adminMessage" class="message-container" aria-live="polite" aria-atomic="true">
+                ${state.adminMessage.text ? showMessage(state.adminMessage.text, state.adminMessage.type) : ''}
+            </div>
 
             <div style="margin-bottom: 30px;">
                 <h3>PARTICIPANTS (${state.participants.length})</h3>
