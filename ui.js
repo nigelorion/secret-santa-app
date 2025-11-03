@@ -34,6 +34,22 @@ function formatQuickPickLink(rawLink) {
     }
 }
 
+function formatQuickPickLinkLabel(link) {
+    const trimmed = (link || '').trim();
+    if (!trimmed) return '';
+    try {
+        const url = new URL(trimmed);
+        const host = (url.hostname || '').replace(/^www\./i, '');
+        const pathname = (url.pathname || '').replace(/\/+$/g, '');
+        const base = pathname && pathname !== '/' ? `${host}${pathname}` : host;
+        if (!base) return '';
+        return base.length > 48 ? `${base.slice(0, 45)}...` : base;
+    } catch (error) {
+        const collapsed = trimmed.replace(/\s+/g, ' ');
+        return collapsed.length > 48 ? `${collapsed.slice(0, 45)}...` : collapsed;
+    }
+}
+
 // Normalizes participant names so comparisons are case-insensitive.
 function normalizeName(name) {
     return (name || '').toString().trim().toLowerCase();
@@ -206,8 +222,9 @@ function buildQuickPickFormats(quickPicks = []) {
 
     const text = trimmed.map((item, index) => {
         const title = item.title || `Pick ${index + 1}`;
-        const link = item.link ? ` — ${item.link}` : '';
-        return `• ${title}${link}`;
+        const linkLabel = formatQuickPickLinkLabel(item.link);
+        const linkNote = linkLabel ? ` — ${linkLabel}` : '';
+        return `• ${title}${linkNote}`;
     }).join('\n');
 
     const htmlItems = trimmed.map((item, index) => {
@@ -215,7 +232,8 @@ function buildQuickPickFormats(quickPicks = []) {
         const link = (item.link || '').trim();
         if (link) {
             const encodedLink = escapeHtml(link);
-            return `<li>${title} — <a href="${encodedLink}" target="_blank" rel="noopener noreferrer">view link</a></li>`;
+            const linkLabel = escapeHtml(formatQuickPickLinkLabel(link) || 'view link');
+            return `<li>${title} — <a href="${encodedLink}" target="_blank" rel="noopener noreferrer">${linkLabel}</a></li>`;
         }
         return `<li>${title}</li>`;
     }).join('');
