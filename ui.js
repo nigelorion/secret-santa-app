@@ -1277,7 +1277,7 @@ async function initializeUI() {
     setupStaticListeners();
 
     updateCountdown();
-    await loadFromFirebase({ fetchParticipants: false });
+    await loadFromFirebase({ fetchParticipants: false, fetchConfig: false });
     render();
     refreshParticipantCount({ silent: true }).catch(() => {});
 
@@ -1291,7 +1291,7 @@ async function initializeUI() {
             setAdminAuth(user, claims);
 
             if (state.isAdminAuthenticated) {
-                await loadFromFirebase({ fetchParticipants: true });
+                await loadFromFirebase({ fetchParticipants: true, fetchConfig: true });
                 await refreshParticipantCount({ force: true, silent: true });
             } else {
                 state.participants = [];

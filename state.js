@@ -16,6 +16,13 @@ const TOTAL_PARTICIPANTS_TARGET = 10;
 
 const participantCountDocRef = doc(db, 'stats', 'participants');
 
+function createDefaultConfig() {
+    return {
+        historicalPairings: { year1: '', year2: '' },
+        emailConfig: { serviceId: '', templateId: '', publicKey: '' }
+    };
+}
+
 // Centralized app state that every module reads/writes.
 const state = {
     view: 'signup',
@@ -43,35 +50,46 @@ const state = {
     },
     participantCount: null,
     participantCountKnown: false,
-    config: {
-        historicalPairings: { year1: '', year2: '' },
-        emailConfig: { serviceId: '', templateId: '', publicKey: '' }
-    }
+    config: createDefaultConfig()
 };
 
 // Pulls config plus (optionally) participant data from Firestore.
 async function loadFromFirebase(options = {}) {
-    const { fetchParticipants = false } = options;
-    try {
-        const configDoc = await getDoc(doc(db, 'config', 'settings'));
-        if (configDoc.exists()) {
-            const configData = configDoc.data();
-            state.config = {
-                ...state.config,
-                ...configData,
-                historicalPairings: {
-                    ...state.config.historicalPairings,
-                    ...(configData.historicalPairings || {})
-                },
-                emailConfig: {
-                    ...state.config.emailConfig,
-                    ...(configData.emailConfig || {})
-                }
-            };
+    const {
+        fetchParticipants = false,
+        fetchConfig = false
+    } = options;
+
+    const shouldFetchConfig = fetchConfig && state.isAdminAuthenticated;
+
+    if (fetchConfig && !state.isAdminAuthenticated) {
+        console.warn('Ignoring config fetch without admin authentication.');
+        state.config = createDefaultConfig();
+    } else if (shouldFetchConfig) {
+        try {
+            const configDoc = await getDoc(doc(db, 'config', 'settings'));
+            if (configDoc.exists()) {
+                const configData = configDoc.data() || {};
+                const defaults = createDefaultConfig();
+                state.config = {
+                    ...defaults,
+                    ...configData,
+                    historicalPairings: {
+                        ...defaults.historicalPairings,
+                        ...(configData.historicalPairings || {})
+                    },
+                    emailConfig: {
+                        ...defaults.emailConfig,
+                        ...(configData.emailConfig || {})
+                    }
+                };
+            } else {
+                state.config = createDefaultConfig();
+            }
+        } catch (error) {
+            console.error('Error loading config from Firebase:', error);
+            throw error;
         }
-    } catch (error) {
-        console.error('Error loading config from Firebase:', error);
-        throw error;
     }
 
     try {
@@ -187,6 +205,7 @@ function setAdminAuth(user, claims = {}) {
     state.isAdminAuthenticated = isAdmin;
     state.adminEmail = isAdmin ? (user.email || '') : '';
     if (!isAdmin) {
+        state.config = createDefaultConfig();
         state.pendingAssignments = null;
         state.previewAssignmentsVisible = false;
         state.adminMessage = { text: '', type: 'info' };
