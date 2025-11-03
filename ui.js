@@ -682,7 +682,7 @@ async function sendEmails(assignments) {
         let failCount = 0;
         const daysUntilChristmas = getDaysUntilChristmas();
         const countdownLine = daysUntilChristmas > 1
-            ? `${daysUntilChristmas} days until Christmas`
+            ? `${daysUntilChristmas} days until Christmas!!`
             : daysUntilChristmas === 1
                 ? '1 day until Christmas'
                 : 'Christmas is here!';
