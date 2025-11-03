@@ -879,9 +879,24 @@ function updateConfig(field, value) {
 function render() {
     const content = document.getElementById('content');
     if (!content) return;
+    const progressAnchor = document.getElementById('progressAnchor');
 
     if (state.view === 'signup') {
         const messageHtml = `<div id="signupMessage" class="message-container" aria-live="polite" aria-atomic="true">${state.signupMessage.text ? showMessage(state.signupMessage.text, state.signupMessage.type) : ''}</div>`;
+
+        if (progressAnchor) {
+            progressAnchor.innerHTML = `
+                <div class="progress-wrap">
+                    <div class="progress-grid">
+                        <div class="progress-bar" id="progressBar">
+                            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                            <span id="progressLabel"></span>
+                        </div>
+                        <p class="progress-text" id="progressText"></p>
+                    </div>
+                </div>
+            `;
+        }
 
         let shellClass = 'signup-shell card';
         let shellContent = '';
@@ -962,15 +977,6 @@ function render() {
 
         content.innerHTML = `
             <div id="signupFormTop"></div>
-            <div class="progress-wrap">
-                <div class="progress-grid">
-                    <div class="progress-bar" id="progressBar">
-                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
-                        <span id="progressLabel"></span>
-                    </div>
-                    <p class="progress-text" id="progressText"></p>
-                </div>
-            </div>
             ${messageHtml}
             <div class="${shellClass}">
                 ${shellContent}
@@ -989,6 +995,9 @@ function render() {
             }
         }
     } else if (!state.isAdminAuthenticated) {
+        if (progressAnchor) {
+            progressAnchor.innerHTML = '';
+        }
         state.view = 'admin-login';
         content.innerHTML = `
             <h2>ADMIN LOGIN</h2>
@@ -1004,6 +1013,9 @@ function render() {
             <button type="button" class="button-secondary" onclick="showView('signup')" style="margin-top:16px;width:auto;padding:10px 18px;">⬅ BACK TO SIGN UP</button>
         `;
     } else {
+        if (progressAnchor) {
+            progressAnchor.innerHTML = '';
+        }
         state.view = 'admin';
         const participantsList = state.participants.length === 0
             ? '<p class="helper-text">NO PARTICIPANTS YET</p>'

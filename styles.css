@@ -180,6 +180,7 @@ body::after {
 .primary-entry {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     background: linear-gradient(135deg, #f5d67b, #f29f6b);
     color: #10261c;
@@ -192,6 +193,11 @@ body::after {
     cursor: pointer;
     box-shadow: 0 8px 18px rgba(0,0,0,0.25);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.top-entry .primary-entry {
+    flex: 0 0 auto;
+    min-width: 220px;
 }
 
 .primary-entry:hover,
@@ -209,6 +215,20 @@ body::after {
 .primary-entry:hover .arrow,
 .primary-entry:focus .arrow {
     transform: translateY(4px);
+}
+
+.top-entry {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: stretch;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.top-entry #progressAnchor {
+    flex: 1 1 320px;
+    min-width: 260px;
 }
 
 .pixel-icon {
@@ -437,12 +457,18 @@ button:active {
 
 .progress-wrap {
     margin: 0 auto 28px;
-    max-width: 460px;
+    width: 100%;
+    max-width: none;
     background: rgba(12, 28, 20, 0.78);
     border: 1px solid rgba(245, 214, 123, 0.25);
     border-radius: 20px;
     padding: 18px 20px;
     box-shadow: 0 12px 26px rgba(0,0,0,0.35);
+}
+
+.top-entry .progress-wrap {
+    margin: 0;
+    height: 100%;
 }
 
 .progress-grid {
